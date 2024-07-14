@@ -1,5 +1,3 @@
-// Layout_Screen.js
-
 import React, { useRef, useState, useEffect } from 'react';
 import {
   FlatList,
@@ -13,8 +11,10 @@ import {
   Platform,
 } from 'react-native';
 import { FILTERS } from './utils/Filters';
-
 import { images } from './assets/images/image';
+import { useFocusEffect } from '@react-navigation/native';
+import { CameraRoll } from '@react-native-camera-roll/camera-roll';
+
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
@@ -31,13 +31,50 @@ const Layout_Screen = ({ route }) => {
   const extractedUri = useRef(null);
 
   useEffect(() => {
+    console.log('Received selectedImage in Layout_Screen:', selectedImage);
     if (selectedImage) {
-      // Ensure the image path is correctly formatted for both iOS and Android
-      const formattedUri = Platform.OS === 'ios' ? selectedImage : `file://${selectedImage}`;
-      setImageUri(formattedUri);
-      extractedUri.current = formattedUri;
+      handleImageUri(selectedImage);
     }
   }, [selectedImage]);
+
+  const handleImageUri = async (uri) => {
+    if (Platform.OS === 'android' && uri.startsWith('content://')) {
+      try {
+        const asset = await CameraRoll.getPhotos({
+          first: 1,
+          assetType: 'Photos',
+          groupTypes: 'All',
+          include: ['imageSize', 'filename'],
+          mimeTypes: ['image/jpeg', 'image/png'],
+          contentUri: uri,
+        });
+        
+        if (asset.edges && asset.edges.length > 0) {
+          const resolvedUri = asset.edges[0].node.image.uri;
+          console.log('Resolved URI:', resolvedUri);
+          setImageUri(resolvedUri);
+          extractedUri.current = resolvedUri;
+        } else {
+          console.error('Failed to resolve content URI:', uri);
+        }
+      } catch (error) {
+        console.error('Error resolving content URI:', error);
+      }
+    } else {
+      setImageUri(uri);
+      extractedUri.current = uri;
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const { selectedImage } = route.params || {};
+      console.log('Received selectedImage in Layout_Screen:', selectedImage);
+      if (selectedImage) {
+        handleImageUri(selectedImage);
+      }
+    }, [route.params])
+  );
 
   const onExtractImage = ({ nativeEvent }) => {
     console.log('Extracted URI:', nativeEvent.uri);
@@ -49,12 +86,12 @@ const Layout_Screen = ({ route }) => {
   };
 
   const handleNext = () => {
-  const imageToPass = selectedIndex === 0 ? imageUri : extractedUri.current;
-  navigation.navigate('EditingScreen', {
-    image: imageToPass,
-    filterIndex: selectedIndex,
-  });
-};
+    const imageToPass = selectedIndex === 0 ? imageUri : extractedUri.current;
+    navigation.navigate('EditingScreen', {
+      media: { uri: imageToPass, type: 'photo' },
+      filterIndex: selectedIndex,
+    });
+  };
 
   const renderFilterComponent = ({ item, index }) => {
     const FilterComponent = item.filterComponent;
@@ -92,7 +129,7 @@ const Layout_Screen = ({ route }) => {
           />
         ) : (
           <Text style={styles.noImageText}>
-            No image found. Please capture an image.
+            No image found. Please capture or select an image.
           </Text>
         )
       ) : (
@@ -107,7 +144,9 @@ const Layout_Screen = ({ route }) => {
                 resizeMode={'contain'}
               />
             ) : (
-              <Text style={styles.noImageText}>No image found</Text>
+              <Text style={styles.noImageText}>
+                No image found. Please capture or select an image.
+              </Text>
             )
           }
         />

@@ -5,11 +5,13 @@ import CameraScreen from './screens/CameraScreen';
 import Layout from './screens/LayoutScreen';
 import Layout_Screen from './screens/Layout_Screen'; // Import the new Layout_Screen
 import EditingScreen from './screens/EditingScreen';
-import CropScreen from './screens/CropScreen';
 import DrawingScreen from './screens/DrawingScreen';
 import StickerScreen from './screens/StickerScreen';
 import FilterScreen from './screens/FilterScreen';
 import GalleryPicker from './screens/GalleryPicker';
+import TrimScreen from './screens/TrimScreen';
+import MusicMenu from './screens/MusicMenu';
+import UploadScreen from './screens/UploadScreen';
 
 
 const Stack = createStackNavigator();
@@ -33,11 +35,12 @@ const App = () => {
           options={{ title: 'Photo Filters' }} // You can customize this title
         />
         <Stack.Screen name="EditingScreen" component={EditingScreen}   options={{ headerShown: false }}  />
-        <Stack.Screen name="CropScreen" component={CropScreen}   options={{ headerShown: false }}  />
         <Stack.Screen name="DrawingScreen" component={DrawingScreen} options={{ headerShown: false }} />
         <Stack.Screen name="StickerScreen" component={StickerScreen}options={{ headerShown: false }} />
         <Stack.Screen name="FilterScreen" component={FilterScreen}options={{ headerShown: false }} />
         <Stack.Screen name="GalleryPicker" component={GalleryPicker}options={{ headerShown: false }} />
+        <Stack.Screen name="TrimScreen" component={TrimScreen} />
+        <Stack.Screen name="UploadScreen" component={UploadScreen}options={{ headerShown: false }} />
 
       </Stack.Navigator>
     </NavigationContainer>

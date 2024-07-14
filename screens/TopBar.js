@@ -1,15 +1,20 @@
 // TopBar.js
 import React, { useState, useRef } from 'react';
-import { View, TouchableOpacity, StyleSheet, Text, ScrollView, TouchableWithoutFeedback } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Text, ScrollView, TouchableWithoutFeedback ,Alert } from 'react-native';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Icon1 from 'react-native-vector-icons/FontAwesome';
 import Icon2 from 'react-native-vector-icons/MaterialCommunityIcons';
 import Icon3 from 'react-native-vector-icons/FontAwesome5';
+import Icon4 from 'react-native-vector-icons/Entypo';
+
 import { useNavigation } from '@react-navigation/native';
 import Slider from '@react-native-community/slider';
 import RecordingMenu from './RecordingMenu';
 import { FILTERS } from './utils/Filters';
+import MusicMenu from './MusicMenu';
+import ImagePicker from 'react-native-image-crop-picker';
+
 
 const TopBar = ({ 
   onBackPress, 
@@ -34,6 +39,10 @@ const TopBar = ({
   onSoftnessChange,
   sharpnessValue,
   onSharpnessChange,
+  isVideo,
+  currentMedia,onMusicPress,
+  onImageCropped,  // Add this line
+
 }) => {
   const navigation = useNavigation();
   const [isMuted, setIsMuted] = useState(false);
@@ -44,6 +53,7 @@ const TopBar = ({
   const [currentAdjustment, setCurrentAdjustment] = useState(null);
   const [isFilterBarVisible, setIsFilterBarVisible] = useState(false);
   const downloadIconRef = useRef(null);
+  const [isMusicMenuVisible, setIsMusicMenuVisible] = useState(false);
 
   const toggleMute = () => setIsMuted(!isMuted);
   const toggleDropdown = () => setIsDropdownVisible(!isDropdownVisible);
@@ -63,23 +73,75 @@ const TopBar = ({
     setCurrentAdjustment(null);
     setIsFilterBarVisible(false);
   };
-
-  const handleBrushPress = () => navigation.navigate('DrawingScreen', { image: currentImage });
-
-  const handleIconPress = (icon) => {
-    if (icon.name === 'color-filter') {
-      setIsScrollBarVisible(false);
-      setIsFilterBarVisible(!isFilterBarVisible);
-    } else if (icon.adjustment) {
-      setCurrentAdjustment(icon.adjustment);
-      setIsScrollBarVisible(false);
-      setIsFilterBarVisible(false);
-    } else if (icon.onPress) {
-      icon.onPress();
-    } else if (icon.name === 'crop') {
-      navigation.navigate('CropScreen', { image: currentImage });
-    }
+  const handleMusicPress = () => {
+  setIsMusicMenuVisible(true);
+};
+const handleCloseMusicMenu = () => {
+    setIsMusicMenuVisible(false);
   };
+   const handleSelectMusic = (music) => {
+    // Handle the selected music (e.g., set it as background music for the video)
+    console.log('Selected music:', music);
+  };
+
+
+  const handleBrushPress = () => navigation.navigate('DrawingScreen', { image: currentMedia.uri });
+
+ const handleIconPress = (icon) => {
+  if (icon.name === 'scissors') {
+    if (isVideo) {
+      navigation.navigate('TrimScreen', { video: currentMedia });
+    } else {
+      Alert.alert('Trim not available', 'Trimming is only available for videos.');
+    }
+  } else if (icon.name === 'crop') {
+    ImagePicker.openCropper({
+      path: currentMedia.uri,
+      width: 300,
+      height: 400,
+      cropperToolbarTitle: 'Crop Image',
+      cropperActiveWidgetColor: '#3498db',
+      cropperStatusBarColor: '#3498db',
+      cropperToolbarColor: '#3498db',
+      cropperToolbarWidgetColor: '#ffffff',
+      showCropGuidelines: true,
+      showCropFrame: true,
+      enableRotationGesture: true,
+      enableZoom: true,
+      freeStyleCropEnabled: true,
+    }).then(image => {
+      console.log('Cropped image:', image);
+      if (onImageCropped) {
+        onImageCropped({ uri: image.path });
+      } else {
+        console.warn('onImageCropped is not defined');
+      }
+    }).catch(error => {
+      console.log('Cropping error:', error);
+      Alert.alert('Error', 'Failed to crop image. Please try again.');
+    });
+  } else if (icon.adjustment) {
+    setCurrentAdjustment(icon.adjustment);
+    setIsScrollBarVisible(false);
+    setIsFilterBarVisible(false);
+  } else if (icon.onPress) {
+    icon.onPress();
+  } else if (icon.name === 'color-filter') {
+    setIsScrollBarVisible(false);
+    setIsFilterBarVisible(!isFilterBarVisible);
+  }
+
+  // Handle other icons as needed
+  switch (icon.name) {
+    case 'image-size-select-large':
+      onPIPPress();
+      break;
+    case 'smile-o':
+      onStickerPress();
+      break;
+    // Add more cases for other icons if needed
+  }
+};
 
   const toggleTextDropdown = (event) => {
     event.stopPropagation();
@@ -97,7 +159,7 @@ const TopBar = ({
   };
 
   const scrollBarIcons = [
-    { name: 'crop', text: 'Crop', iconSet: 'Ionicons' },
+  { name: 'crop', text: 'Crop', iconSet: 'Ionicons' },
     { name: 'adjust', text: 'Contrast', iconSet: 'FontAwesome', adjustment: 'contrast' },
     { name: 'sun-o', text: 'Brightness', iconSet: 'FontAwesome', adjustment: 'brightness' },
     { name: 'thermometer-outline', text: 'Temperature', iconSet: 'Ionicons', adjustment: 'temperature' },
@@ -105,7 +167,7 @@ const TopBar = ({
     { name: 'image-filter-center-focus', text: 'Sharpness', iconSet: 'MaterialCommunityIcons', adjustment: 'sharpness' },
     { name: 'color-filter', text: 'Filters', iconSet: 'Ionicons' },
     { name: 'image-size-select-large', text: 'PIP', iconSet: 'MaterialCommunityIcons', onPress: onPIPPress },
-    { name: 'scissors', text: 'Trim', iconSet: 'FontAwesome' },
+    { name: 'scissors', text: 'Trim', iconSet: 'FontAwesome', onPress: () => handleIconPress({ name: 'scissors' }) },
     { name: 'smile-o', text: 'Stickers', iconSet: 'FontAwesome', onPress: onStickerPress },
   ];
 
@@ -223,9 +285,9 @@ const TopBar = ({
           <TouchableOpacity onPress={onBackPress}>
             <Icon name="arrow-back" size={24} color="#000" />
           </TouchableOpacity>
-          <TouchableOpacity>
-            <Icon name="musical-notes-sharp" size={24} color="#000" />
-          </TouchableOpacity>
+          <TouchableOpacity onPress={handleMusicPress}>
+          <Icon name="musical-notes-sharp" size={24} color="#000" />
+        </TouchableOpacity>
           <TouchableOpacity onPress={toggleDropdown} ref={downloadIconRef}>
             <Icon name="download" size={24} color="#000" />
           </TouchableOpacity>
@@ -241,7 +303,7 @@ const TopBar = ({
         <View style={styles.centerIconsContainer}>
           <View style={styles.leftIcons}>
             <TouchableOpacity style={styles.centerIcon} onPress={onFriendsPress}>
-              <Icon3 name="user-friends" size={18} color="#000" />
+              <Icon4 name="user-friends" size={18} color="#000" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.centerIcon} onPress={onLocationPress}>
               <Icon name="location" size={18} color="#000" />
@@ -314,7 +376,8 @@ const TopBar = ({
             <Icon1 name="edit" size={24} color="#000" />
             <Text style={styles.bottomBarText}>Edit</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.bottomBarItem}>
+          <TouchableOpacity style={styles.bottomBarItem}
+          onPress={() => navigation.navigate('UploadScreen')}>
             <Icon name="arrow-redo" size={24} color="#000" />
             <Text style={styles.bottomBarText}>Share</Text>
           </TouchableOpacity>
@@ -323,6 +386,11 @@ const TopBar = ({
         {isRecordingMenuVisible && (
           <RecordingMenu onClose={toggleRecordingMenu} />
         )}
+        <MusicMenu
+          isVisible={isMusicMenuVisible}
+          onClose={handleCloseMusicMenu}
+          onSelectMusic={handleSelectMusic}
+        />
       </View>
     </TouchableWithoutFeedback>
   );

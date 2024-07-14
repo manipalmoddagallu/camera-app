@@ -1,5 +1,4 @@
-// EditingScreen.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Image,
@@ -10,8 +9,10 @@ import {
   PanResponder,
   Modal,
   Animated,
-  TouchableOpacity
+  TouchableOpacity,
+  Platform,TextInput
 } from 'react-native';
+import Video from 'react-native-video';
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
@@ -24,10 +25,13 @@ import LocationMenu from './LocationMenu';
 import PipMenu from './PipMenu';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { FILTERS } from './utils/Filters';
+import StickerScreen from './StickerScreen';
+
 
 const EditingScreen = ({ route, navigation }) => {
-  const { image = null, filterIndex = -1 } = route?.params || {};
-  const [currentImage, setCurrentImage] = useState(image);
+  const { media = null, filterIndex = -1 } = route?.params || {};
+  const [currentMedia, setCurrentMedia] = useState(media);
+  const [isVideo, setIsVideo] = useState(media?.type === 'video' || media?.type === 'boomerang');
   const [selectedFilter, setSelectedFilter] = useState(FILTERS[filterIndex] || null);
   const [selectedHashtags, setSelectedHashtags] = useState([]);
   const [selectedLocation, setSelectedLocation] = useState(null);
@@ -42,64 +46,143 @@ const EditingScreen = ({ route, navigation }) => {
   const [pipBackgroundColor, setPipBackgroundColor] = useState('rgba(0, 0, 0, 0.5)');
   const [pipOpacity, setPipOpacity] = useState(1);
   const [pipRotation, setPipRotation] = useState(0);
+  const videoRef = useRef(null);
+  const [textElements, setTextElements] = useState([]);
+  const [isStickersVisible, setIsStickersVisible] = useState(false);
+  const [selectedStickers, setSelectedStickers] = useState([]);
+  const [croppedImage, setCroppedImage] = useState(null);
+  const [originalImage, setOriginalImage] = useState(null);
+  const handleSave = () => saveMedia(false);
+  const handleDraft = () => saveMedia(true);
+
+  const handleFriendsPress = () => setIsFriendsListVisible(true);
+  const handleHashtagPress = () => setIsHashtagMenuVisible(true);
+  const handleLocationPress = () => setIsLocationMenuVisible(true);
+  const handleCloseFriendsList = () => setIsFriendsListVisible(false);
+  const handleCloseHashtagMenu = () => setIsHashtagMenuVisible(false);
+  const handleCloseLocationMenu = () => setIsLocationMenuVisible(false);
+  const handlePipMenuPress = () => setIsPipMenuVisible(true);
+  const handleClosePipMenu = () => setIsPipMenuVisible(false);
+  const handleSelectFilter = (filter) => setSelectedFilter(filter);
+  const SelectedFilterComponent = selectedFilter ? selectedFilter.filterComponent : null;
+
+
 
   useEffect(() => {
-    if (!currentImage) {
-      console.log('No image received');
-      Alert.alert('Error', 'No image provided', [
+    if (!currentMedia) {
+      console.log('No media received');
+      Alert.alert('Error', 'No media provided', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
+    } else {
+      console.log('Received media:', currentMedia);
     }
-  }, [currentImage, navigation]);
+  }, [currentMedia, navigation]);
+  useEffect(() => {
+  const unsubscribe = navigation.addListener('focus', () => {
+    const trimmedVideo = route.params?.trimmedVideo;
+    const newMedia = route.params?.media;
+    const croppedImage = route.params?.croppedImage;
+    const originalImage = route.params?.originalImage;
+
+    if (croppedImage) {
+      console.log('Received cropped image:', croppedImage);
+      setCurrentMedia(croppedImage);
+      setOriginalImage(originalImage || currentMedia);
+      setIsVideo(false);
+    } else if (trimmedVideo) {
+      setCurrentMedia(trimmedVideo);
+      setIsVideo(true);
+    } else if (newMedia) {
+      setCurrentMedia(newMedia);
+      setIsVideo(newMedia.type === 'video');
+    } else if (!currentMedia) {
+      console.log('No media received');
+      Alert.alert('Error', 'No media provided', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } else {
+      console.log('Received media:', currentMedia);
+    }
+  });
+
+  return unsubscribe;
+}, [navigation, route.params]);
+
+  
+
+  useEffect(() => {
+  const unsubscribe = navigation.addListener('focus', () => {
+    const trimmedVideo = route.params?.trimmedVideo;
+    const newMedia = route.params?.media;
+    const croppedImage = route.params?.croppedImage;
+    const originalImage = route.params?.originalImage;
+    const editedImage = route.params?.editedImage; // Add this line
+
+    if (editedImage) {
+      setCurrentMedia({ uri: editedImage, type: 'photo' });
+      setIsVideo(false);
+    } else if (croppedImage) {
+      console.log('Received cropped image:', croppedImage);
+      setCurrentMedia(croppedImage);
+      setOriginalImage(originalImage || currentMedia);
+      setIsVideo(false);
+    } else if (trimmedVideo) {
+      setCurrentMedia(trimmedVideo);
+      setIsVideo(true);
+    } else if (newMedia) {
+      setCurrentMedia(newMedia);
+      setIsVideo(newMedia.type === 'video');
+    } else if (!currentMedia) {
+      console.log('No media received');
+      Alert.alert('Error', 'No media provided', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } else {
+      console.log('Received media:', currentMedia);
+    }
+  });
+
+  return unsubscribe;
+}, [navigation, route.params, currentMedia]);
 
   const handleBackPress = () => {
     navigation.goBack();
   };
 
-  const saveImage = async (isDraft = false) => {
+  const handleSelectSticker = (sticker) => {
+    setSelectedStickers([
+      ...selectedStickers,
+      {
+        ...sticker,
+        pan: new Animated.ValueXY(),
+        scale: new Animated.Value(1),
+        rotate: new Animated.Value(0),
+      },
+    ]);
+    setIsStickersVisible(false);
+  };
+
+  const saveMedia = async (isDraft = false) => {
     try {
-      if (!currentImage) {
-        throw new Error('No image to save');
+      if (!currentMedia) {
+        throw new Error('No media to save');
       }
       const album = isDraft ? 'Drafts' : 'Camera';
-      await CameraRoll.save(currentImage, { type: 'photo', album: album });
-      console.log('Image saved successfully');
-      Alert.alert('Success', `Image ${isDraft ? 'drafted' : 'saved'} successfully`);
+      const saveResult = await CameraRoll.save(currentMedia.uri, { 
+        type: isVideo ? 'video' : 'photo', 
+        album: album 
+      });
+      console.log('Media saved successfully:', saveResult);
+      Alert.alert('Success', `Media ${isDraft ? 'drafted' : 'saved'} successfully`);
     } catch (error) {
-      console.error('Error saving image:', error);
+      console.error('Error saving media:', error);
       if (error.message.includes('permission')) {
-        Alert.alert('Permission Error', 'Storage permission is required to save images. Please grant permission in your device settings.');
+        Alert.alert('Permission Error', 'Storage permission is required to save media. Please grant permission in your device settings.');
       } else {
-        Alert.alert('Error', `Failed to ${isDraft ? 'draft' : 'save'} image. Please try again.`);
+        Alert.alert('Error', `Failed to ${isDraft ? 'draft' : 'save'} media. Please try again.`);
       }
     }
-  };
-
-  const handleSave = () => saveImage(false);
-  const handleDraft = () => saveImage(true);
-
-  const handleFriendsPress = () => {
-    setIsFriendsListVisible(true);
-  };
-
-  const handleHashtagPress = () => {
-    setIsHashtagMenuVisible(true);
-  };
-
-  const handleLocationPress = () => {
-    setIsLocationMenuVisible(true);
-  };
-
-  const handleCloseFriendsList = () => {
-    setIsFriendsListVisible(false);
-  };
-
-  const handleCloseHashtagMenu = () => {
-    setIsHashtagMenuVisible(false);
-  };
-
-  const handleCloseLocationMenu = () => {
-    setIsLocationMenuVisible(false);
   };
 
   const handleAddHashtag = (hashtags) => {
@@ -108,7 +191,8 @@ const EditingScreen = ({ route, navigation }) => {
       ...hashtags.map(hashtag => ({ 
         ...hashtag, 
         pan: new Animated.ValueXY(),
-        scale: new Animated.Value(1)
+        scale: new Animated.Value(1),
+        rotate: new Animated.Value(0)
       }))
     ]);
     setIsHashtagMenuVisible(false);
@@ -118,7 +202,8 @@ const EditingScreen = ({ route, navigation }) => {
     setSelectedLocation({
       ...location,
       pan: new Animated.ValueXY(),
-      scale: new Animated.Value(1)
+      scale: new Animated.Value(1),
+      rotate: new Animated.Value(0)
     });
     setIsLocationMenuVisible(false);
   };
@@ -129,31 +214,47 @@ const EditingScreen = ({ route, navigation }) => {
       { 
         ...friend, 
         pan: new Animated.ValueXY(),
-        scale: new Animated.Value(1)
+        scale: new Animated.Value(1),
+        rotate: new Animated.Value(0)
       }
     ]);
     setIsFriendsListVisible(false);
   };
 
+  const handleAddText = () => {
+  const newText = {
+    id: Date.now(),
+    content: 'New Text',
+    pan: new Animated.ValueXY(),
+    scale: new Animated.Value(1),
+    rotate: new Animated.Value(0),
+  };
+  setTextElements([...textElements, newText]);
+  };
+
+    const handleEditText = (id, newContent) => {
+      setTextElements(textElements.map(text => 
+        text.id === id ? {...text, content: newContent} : text
+      ));
+    };
+
   const createPanResponder = (item, itemType) => {
     let lastScale = 1;
+    let lastRotation = 0;
     let lastDistance = 0;
-    
+
     return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: () => {
-        if (item && item.pan) {
-          item.pan.setOffset({
-            x: item.pan.x._value,
-            y: item.pan.y._value
-          });
-          item.pan.setValue({ x: 0, y: 0 });
-        }
+        item.pan.setOffset({
+          x: item.pan.x._value,
+          y: item.pan.y._value
+        });
+        item.pan.setValue({ x: 0, y: 0 });
       },
       onPanResponderMove: (event, gestureState) => {
         const { touches } = event.nativeEvent;
-        if (!item || !item.pan || !item.scale) return;
 
         if (touches.length === 1) {
           Animated.event(
@@ -163,6 +264,7 @@ const EditingScreen = ({ route, navigation }) => {
         } else if (touches.length === 2) {
           const touch1 = touches[0];
           const touch2 = touches[1];
+
           const distance = Math.sqrt(
             Math.pow(touch2.pageX - touch1.pageX, 2) +
             Math.pow(touch2.pageY - touch1.pageY, 2)
@@ -181,14 +283,18 @@ const EditingScreen = ({ route, navigation }) => {
             lastScale = newScale;
           }
 
+          const angle = Math.atan2(touch2.pageY - touch1.pageY, touch2.pageX - touch1.pageX);
+          const rotation = angle - lastRotation;
+          item.rotate.setValue(item.rotate._value + rotation);
+
+          lastRotation = angle;
           lastDistance = distance;
         }
       },
       onPanResponderRelease: () => {
-        if (item && item.pan) {
-          item.pan.flattenOffset();
-        }
+        item.pan.flattenOffset();
         lastDistance = 0;
+        lastRotation = 0;
       }
     });
   };
@@ -207,7 +313,8 @@ const EditingScreen = ({ route, navigation }) => {
           setPipImage({
             uri: selectedImage.node.image.uri,
             pan: new Animated.ValueXY(),
-            scale: new Animated.Value(1)
+            scale: new Animated.Value(1),
+            rotate: new Animated.Value(0)
           });
         }
       });
@@ -216,20 +323,11 @@ const EditingScreen = ({ route, navigation }) => {
       Alert.alert('Error', 'Failed to access gallery. Please try again.');
     }
   };
-
-  const handlePipMenuPress = () => {
-    setIsPipMenuVisible(true);
-  };
-
-  const handleClosePipMenu = () => {
-    setIsPipMenuVisible(false);
-  };
-
-  const handleSelectFilter = (filter) => {
-    setSelectedFilter(filter);
-  };
-
-  const SelectedFilterComponent = selectedFilter ? selectedFilter.filterComponent : null;
+  
+  const handleImageCropped = (croppedImage) => {
+  setCurrentMedia(croppedImage);
+  setOriginalImage(currentMedia);
+};
 
   return (
     <SafeAreaView style={styles.container}>
@@ -237,34 +335,50 @@ const EditingScreen = ({ route, navigation }) => {
         onBackPress={handleBackPress}
         onSave={handleSave}
         onDraft={handleDraft}
-        currentImage={currentImage}
+        currentMedia={currentMedia}
         onFriendsPress={handleFriendsPress}
         onHashtagPress={handleHashtagPress}
         onLocationPress={handleLocationPress}
         onPIPPress={handlePIPPress}
         onSelectFilter={handleSelectFilter}
         selectedFilter={selectedFilter}
+        isVideo={isVideo}
+        onAddText={handleAddText}
+        onImageCropped={handleImageCropped}
+        
       />
-      <View style={styles.imageContainer}>
-        {currentImage && (
-          SelectedFilterComponent ? (
-            <SelectedFilterComponent
-              image={
-                <Image
-                  source={{ uri: currentImage }}
-                  style={styles.image}
-                  resizeMode="contain"
-                />
-              }
-            />
-          ) : (
-            <Image
-              source={{ uri: currentImage }}
-              style={styles.image}
-              resizeMode="contain"
-            />
-          )
-        )}
+      <View style={styles.mediaContainer}>
+       {currentMedia && (
+  isVideo ? (
+    <Video
+      ref={videoRef}
+      source={{ uri: currentMedia.uri }}
+      style={styles.media}
+      resizeMode="contain"
+      repeat={currentMedia.type === 'boomerang'}
+      controls={currentMedia.type !== 'boomerang'}
+      onError={(error) => console.error('Video playback error:', error)}
+    />
+  ) : (
+    SelectedFilterComponent ? (
+      <SelectedFilterComponent
+        image={
+          <Image
+            source={{ uri: currentMedia.uri }}
+            style={styles.media}
+            resizeMode="contain"
+          />
+        }
+      />
+    ) : (
+      <Image
+        source={{ uri: currentMedia.uri }}
+        style={styles.media}
+        resizeMode="contain"
+      />
+    )
+  )
+)}
         {selectedFriends.map((friend) => {
           const panResponder = createPanResponder(friend, 'friend');
           return (
@@ -276,7 +390,8 @@ const EditingScreen = ({ route, navigation }) => {
                   transform: [
                     { translateX: friend.pan.x },
                     { translateY: friend.pan.y },
-                    { scale: friend.scale }
+                    { scale: friend.scale },
+                    
                   ]
                 }
               ]}
@@ -297,7 +412,8 @@ const EditingScreen = ({ route, navigation }) => {
                   transform: [
                     { translateX: hashtag.pan.x },
                     { translateY: hashtag.pan.y },
-                    { scale: hashtag.scale }
+                    { scale: hashtag.scale },
+                    
                   ]
                 }
               ]}
@@ -315,7 +431,8 @@ const EditingScreen = ({ route, navigation }) => {
                 transform: [
                   { translateX: selectedLocation.pan.x },
                   { translateY: selectedLocation.pan.y },
-                  { scale: selectedLocation.scale }
+                  { scale: selectedLocation.scale },
+                 
                 ]
               }
             ]}
@@ -361,6 +478,67 @@ const EditingScreen = ({ route, navigation }) => {
             </TouchableOpacity>
           </Animated.View>
         )}
+        {textElements.map((text) => {
+          const panResponder = createPanResponder(text, 'text');
+          return (
+            <Animated.View
+              key={text.id}
+              style={[
+                styles.overlay,
+                {
+                  transform: [
+                    { translateX: text.pan.x },
+                    { translateY: text.pan.y },
+                    { scale: text.scale },
+                    { rotate: text.rotate.interpolate({
+                      inputRange: [0, 360],
+                      outputRange: ['0deg', '360deg']
+                    })},
+                  ]
+                }
+              ]}
+              {...panResponder.panHandlers}
+            >
+              <TextInput
+                style={styles.overlayText}
+                value={text.content}
+                onChangeText={(newContent) => handleEditText(text.id, newContent)}
+              />
+            </Animated.View>
+          );
+        })}
+        {selectedStickers.map((sticker) => {
+        const panResponder = createPanResponder(sticker, 'sticker');
+        return (
+          <Animated.View
+            key={sticker.id}
+            style={[
+              styles.stickerContainer,
+              {
+                transform: [
+                  { translateX: sticker.pan.x },
+                  { translateY: sticker.pan.y },
+                  { scale: sticker.scale },
+                  { rotate: sticker.rotate.interpolate({
+                    inputRange: [0, 360],
+                    outputRange: ['0deg', '360deg']
+                  })},
+                ]
+              }
+            ]}
+            {...panResponder.panHandlers}
+          >
+            <Image source={{ uri: sticker.image }} style={styles.sticker} />
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => setSelectedStickers(selectedStickers.filter(s => s.id !== sticker.id))}
+            >
+              <Icon name="close" size={20} color="white" />
+            </TouchableOpacity>
+          </Animated.View>
+        );
+        })}
+
       </View>
       <Modal
         visible={isFriendsListVisible}
@@ -371,6 +549,7 @@ const EditingScreen = ({ route, navigation }) => {
           <FriendsList onAddFriend={handleAddFriend} onClose={handleCloseFriendsList} />
         </View>
       </Modal>
+
       <Modal
         visible={isHashtagMenuVisible}
         transparent={true}
@@ -380,6 +559,7 @@ const EditingScreen = ({ route, navigation }) => {
           <HashtagMenu onSelectHashtag={handleAddHashtag} onClose={handleCloseHashtagMenu} />
         </View>
       </Modal>
+
       <Modal
         visible={isLocationMenuVisible}
         transparent={true}
@@ -389,6 +569,7 @@ const EditingScreen = ({ route, navigation }) => {
           <LocationMenu onSelectLocation={handleSelectLocation} onClose={handleCloseLocationMenu} />
         </View>
       </Modal>
+
       <Modal
         visible={isPipMenuVisible}
         transparent={true}
@@ -405,8 +586,23 @@ const EditingScreen = ({ route, navigation }) => {
             pipRotation={pipRotation}
             setPipRotation={setPipRotation}
             onClose={handleClosePipMenu}
+            currentMedia={currentMedia}
           />
         </View>
+      </Modal>
+
+      <Modal
+        visible={isStickersVisible}
+        transparent={true}
+        animationType="slide"
+      >
+      <View style={styles.modalContainer}>
+        <StickerScreen
+          onSelectSticker={handleSelectSticker}
+          onClose={() => setIsStickersVisible(false)}
+          currentMedia={currentMedia}
+        />
+      </View>
       </Modal>
     </SafeAreaView>
   );
@@ -417,14 +613,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5FCFF',
   },
-  imageContainer: {
+  mediaContainer: {
     width: wp('100%'),
     height: hp('93%'),
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
   },
-  image: {
+  media: {
     width: wp('100%'),
     height: hp('93%'),
   },
@@ -437,7 +633,8 @@ const styles = StyleSheet.create({
   },
   overlayText: {
     color: 'white',
-    fontSize: 12,
+    fontSize: 18,
+    minWidth: 100,
   },
   modalContainer: {
     flex: 1,
@@ -488,23 +685,26 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
-  pipMenuSection: {
-    marginBottom: 20,
-  },
-  slider: {
-    width: '100%',
-    height: 40,
-  },
-  colorPicker: {
-    width: '100%',
-    height: 200,
-  },
-  closeButton: {
-    alignItems: 'center',
-    padding: 10,
-    backgroundColor: '#ddd',
-    borderRadius: 5,
-  },
+  stickerContainer: {
+  position: 'absolute',
+  zIndex: 2,
+},
+sticker: {
+  width: 100,
+  height: 100,
+  resizeMode: 'contain',
+},
+deleteButton: {
+  position: 'absolute',
+  top: -10,
+  right: -10,
+  backgroundColor: 'red',
+  borderRadius: 10,
+  width: 20,
+  height: 20,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
 });
 
 export default EditingScreen;

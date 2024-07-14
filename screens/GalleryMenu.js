@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, FlatList, Image, Modal } from 'react-native';
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
+import { useNavigation } from '@react-navigation/native';
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from 'react-native-responsive-screen';
 
 const GalleryMenu = ({ isVisible, onClose, onImageSelect }) => {
+  const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState('gallery');
   const [galleryImages, setGalleryImages] = useState([]);
 
@@ -29,7 +31,9 @@ const GalleryMenu = ({ isVisible, onClose, onImageSelect }) => {
   };
 
   const handleImageSelect = (image) => {
-    onImageSelect(image.node.image.uri);
+    const imageUri = image.node.image.uri;
+    console.log('Selected image URI in GalleryMenu:', imageUri);
+    onImageSelect(imageUri);
     onClose();
   };
 
@@ -87,6 +91,8 @@ const GalleryMenu = ({ isVisible, onClose, onImageSelect }) => {
     </Modal>
   );
 };
+
+
 
 const styles = StyleSheet.create({
   container: {
