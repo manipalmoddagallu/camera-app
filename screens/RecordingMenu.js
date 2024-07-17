@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, FlatList } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, FlatList ,ImageBackground} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -108,57 +108,61 @@ const RecordingMenu = ({ onClose }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onClose}>
-          <Icon name="close" size={24} color="#000" />
-        </TouchableOpacity>
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, currentSection === 'record' && styles.activeTab]}
-            onPress={() => setCurrentSection('record')}
-          >
-            <Text>Record</Text>
+    <ImageBackground 
+      source={require('./assets/images/BG.png')} // Replace with your image path
+      style={styles.container}
+    >
+      <View style={styles.overlay}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={onClose}>
+            <Icon name="close" size={24} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, currentSection === 'saved' && styles.activeTab]}
-            onPress={() => setCurrentSection('saved')}
-          >
-            <Text>Saved</Text>
-          </TouchableOpacity>
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tab, currentSection === 'record' && styles.activeTab]}
+              onPress={() => setCurrentSection('record')}
+            >
+              <Text style={styles.tabText}>Record</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, currentSection === 'saved' && styles.activeTab]}
+              onPress={() => setCurrentSection('saved')}
+            >
+              <Text style={styles.tabText}>Saved</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+        {currentSection === 'record' ? (
+          <View style={styles.recordSection}>
+            <TouchableOpacity style={styles.recordButton} onPress={toggleRecording}>
+              <Icon name={isRecording ? 'stop' : 'mic'} size={40} color={isRecording ? 'red' : 'white'} />
+            </TouchableOpacity>
+            <Text style={styles.timer}>{formatTime(isPlaying ? playbackTimer : timer)}</Text>
+            <TouchableOpacity style={styles.playButton} onPress={playRecording}>
+              <Icon name={isPlaying ? 'pause' : 'play'} size={30} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.saveButton} onPress={saveRecording}>
+              <Text style={styles.saveButtonText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <FlatList
+            data={savedRecordings}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={({ item }) => (
+              <View style={styles.savedItem}>
+                <Text style={styles.savedItemText}>{formatTime(item.duration)}</Text>
+                <TouchableOpacity onPress={() => playSavedRecording(item.id)}>
+                  <Icon name="play" size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            )}
+          />
+        )}
       </View>
-      {currentSection === 'record' ? (
-        <View style={styles.recordSection}>
-          <TouchableOpacity style={styles.recordButton} onPress={toggleRecording}>
-            <Icon name={isRecording ? 'stop' : 'mic'} size={40} color={isRecording ? 'red' : 'black'} />
-          </TouchableOpacity>
-          <Text style={styles.timer}>{formatTime(isPlaying ? playbackTimer : timer)}</Text>
-          <TouchableOpacity style={styles.playButton} onPress={playRecording}>
-            <Icon name={isPlaying ? 'pause' : 'play'} size={30} color="#000" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.saveButton} onPress={saveRecording}>
-            <Text>Save</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <FlatList
-          data={savedRecordings}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <View style={styles.savedItem}>
-              <Text>{formatTime(item.duration)}</Text>
-              <TouchableOpacity onPress={() => playSavedRecording(item.id)}>
-                <Icon name="play" size={24} color="#000" />
-              </TouchableOpacity>
-            </View>
-          )}
-        />
-      )}
-    </View>
+    </ImageBackground>
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {
@@ -167,9 +171,14 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: hp('50%'),
-    backgroundColor: 'white',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    overflow: 'hidden',
+    zIndex: 4
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // semi-transparent overlay
     padding: 20,
   },
   header: {
@@ -188,7 +197,10 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   activeTab: {
-    borderBottomColor: 'black',
+    borderBottomColor: 'white',
+  },
+  tabText: {
+    color: 'white',
   },
   recordSection: {
     alignItems: 'center',
@@ -199,28 +211,32 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   timer: {
     fontSize: 24,
     marginTop: 20,
+    color: 'white',
   },
   playButton: {
     marginTop: 20,
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   saveButton: {
     marginTop: 20,
     padding: 10,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 5,
+  },
+  saveButtonText: {
+    color: 'white',
   },
   savedItem: {
     flexDirection: 'row',
@@ -228,7 +244,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  savedItemText: {
+    color: 'white',
   },
 });
 

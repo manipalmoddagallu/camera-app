@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, Text, FlatList, StyleSheet } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, FlatList, StyleSheet,ImageBackground } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
+import { images } from './assets/images/image';
 import MapplsGL from 'mappls-map-react-native';
 MapplsGL.setMapSDKKey('619e2f284f7f6cb4d3fb4d234cc8363a');
 MapplsGL.setRestAPIKey('619e2f284f7f6cb4d3fb4d234cc8363a');
@@ -32,6 +34,10 @@ onClose();
  };
 return (
 <View style={styles.container}>
+<ImageBackground
+          source={images.BG}
+          style={styles.backgroundImage}
+        >
 <View style={styles.searchBar}>
 <TextInput
 style={styles.searchInput}
@@ -63,19 +69,31 @@ renderItem={({ item }) => (
 </TouchableOpacity>
  )}
 />
+</ImageBackground>
 </View>
  );
 };
 const styles = StyleSheet.create({
 container: {
-flex: 1,
-backgroundColor: 'white',
-padding: 10,
- },
+    height: hp('50%'),
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    overflow: 'hidden',
+  },
 searchBar: {
 flexDirection: 'row',
 alignItems: 'center',
 marginBottom: 10,
+top:10,width:380,left:20
  },
 searchInput: {
 flex: 1,
@@ -105,5 +123,12 @@ placeAddress: {
 fontSize: 12,
 color: 'gray',
  },
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    resizeMode: 'cover',
+  },
 });
 export default LocationMenu;

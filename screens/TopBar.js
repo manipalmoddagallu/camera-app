@@ -1,6 +1,6 @@
 // TopBar.js
-import React, { useState, useRef } from 'react';
-import { View, TouchableOpacity, StyleSheet, Text, ScrollView, TouchableWithoutFeedback ,Alert } from 'react-native';
+import React, { useState, useRef , useEffect } from 'react';
+import { View, TouchableOpacity, StyleSheet, Text, ScrollView, TouchableWithoutFeedback ,Alert ,Modal} from 'react-native';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Icon1 from 'react-native-vector-icons/FontAwesome';
@@ -14,21 +14,23 @@ import RecordingMenu from './RecordingMenu';
 import { FILTERS } from './utils/Filters';
 import MusicMenu from './MusicMenu';
 import ImagePicker from 'react-native-image-crop-picker';
+import Menu, { MenuItem } from 'react-native-material-menu';
+import ColorPicker from 'react-native-wheel-color-picker';
 
 
 const TopBar = ({ 
   onBackPress, 
   onSave, 
   onDraft, 
-  currentImage, 
   onAddText, 
-  onFriendsPress, 
-  onHashtagPress, 
-  onLocationPress, 
+
   onStickerPress, 
   onPIPPress,
   onSelectFilter,
   selectedFilter,
+  isVideo,
+  currentMedia,
+  onImageCropped,
   contrastValue,
   onContrastChange,
   brightnessValue,
@@ -39,10 +41,9 @@ const TopBar = ({
   onSoftnessChange,
   sharpnessValue,
   onSharpnessChange,
-  isVideo,
-  currentMedia,onMusicPress,
-  onImageCropped,  // Add this line
+    onTextStyle,
 
+ // Add this line
 }) => {
   const navigation = useNavigation();
   const [isMuted, setIsMuted] = useState(false);
@@ -54,39 +55,32 @@ const TopBar = ({
   const [isFilterBarVisible, setIsFilterBarVisible] = useState(false);
   const downloadIconRef = useRef(null);
   const [isMusicMenuVisible, setIsMusicMenuVisible] = useState(false);
-
+  const handleBrushPress = () => navigation.navigate('DrawingScreen', { image: currentMedia.uri });
   const toggleMute = () => setIsMuted(!isMuted);
   const toggleDropdown = () => setIsDropdownVisible(!isDropdownVisible);
+  const [isStickerBarVisible, setIsStickerBarVisible] = useState(false);
+  const [stickers, setStickers] = useState([]);
+  const toggleRecordingMenu = () => setIsRecordingMenuVisible(!isRecordingMenuVisible);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [isSpeedMenuVisible, setIsSpeedMenuVisible] = useState(false);
+  const speedMenuRef = useRef(null);
+    const [isColorPickerVisible, setIsColorPickerVisible] = useState(false);
+const [currentColor, setCurrentColor] = useState('#ffffff');
 
-  const handleSave = () => {
-    onSave();
-    setIsDropdownVisible(false);
-  };
-
-  const handleDraft = () => {
-    onDraft();
-    setIsDropdownVisible(false);
-  };
 
   const toggleScrollBar = () => {
     setIsScrollBarVisible(!isScrollBarVisible);
     setCurrentAdjustment(null);
     setIsFilterBarVisible(false);
   };
-  const handleMusicPress = () => {
-  setIsMusicMenuVisible(true);
-};
-const handleCloseMusicMenu = () => {
+
+  const handleCloseMusicMenu = () => {
     setIsMusicMenuVisible(false);
   };
-   const handleSelectMusic = (music) => {
+  const handleSelectMusic = (music) => {
     // Handle the selected music (e.g., set it as background music for the video)
     console.log('Selected music:', music);
   };
-
-
-  const handleBrushPress = () => navigation.navigate('DrawingScreen', { image: currentMedia.uri });
-
  const handleIconPress = (icon) => {
   if (icon.name === 'scissors') {
     if (isVideo) {
@@ -95,31 +89,35 @@ const handleCloseMusicMenu = () => {
       Alert.alert('Trim not available', 'Trimming is only available for videos.');
     }
   } else if (icon.name === 'crop') {
-    ImagePicker.openCropper({
-      path: currentMedia.uri,
-      width: 300,
-      height: 400,
-      cropperToolbarTitle: 'Crop Image',
-      cropperActiveWidgetColor: '#3498db',
-      cropperStatusBarColor: '#3498db',
-      cropperToolbarColor: '#3498db',
-      cropperToolbarWidgetColor: '#ffffff',
-      showCropGuidelines: true,
-      showCropFrame: true,
-      enableRotationGesture: true,
-      enableZoom: true,
-      freeStyleCropEnabled: true,
-    }).then(image => {
-      console.log('Cropped image:', image);
-      if (onImageCropped) {
-        onImageCropped({ uri: image.path });
-      } else {
-        console.warn('onImageCropped is not defined');
-      }
-    }).catch(error => {
-      console.log('Cropping error:', error);
-      Alert.alert('Error', 'Failed to crop image. Please try again.');
-    });
+    if (isVideo) {
+      navigation.navigate('VideoCropScreen', { video: currentMedia });
+    } else {
+      ImagePicker.openCropper({
+        path: currentMedia.uri,
+        width: 300,
+        height: 400,
+        cropperToolbarTitle: 'Crop Image',
+        cropperActiveWidgetColor: '#3498db',
+        cropperStatusBarColor: '#3498db',
+        cropperToolbarColor: '#3498db',
+        cropperToolbarWidgetColor: '#ffffff',
+        showCropGuidelines: true,
+        showCropFrame: true,
+        enableRotationGesture: true,
+        enableZoom: true,
+        freeStyleCropEnabled: true,
+      }).then(image => {
+        console.log('Cropped image:', image);
+        if (onImageCropped) {
+          onImageCropped({ uri: image.path });
+        } else {
+          console.warn('onImageCropped is not defined');
+        }
+      }).catch(error => {
+        console.log('Cropping error:', error);
+        Alert.alert('Error', 'Failed to crop image. Please try again.');
+      });
+    }
   } else if (icon.adjustment) {
     setCurrentAdjustment(icon.adjustment);
     setIsScrollBarVisible(false);
@@ -130,6 +128,13 @@ const handleCloseMusicMenu = () => {
     setIsScrollBarVisible(false);
     setIsFilterBarVisible(!isFilterBarVisible);
   }
+  if (icon.name === 'smile-o') {
+    setIsScrollBarVisible(false);
+    setIsFilterBarVisible(false);
+    setIsStickerBarVisible(!isStickerBarVisible);
+  } else {
+    setIsStickerBarVisible(false);
+  }
 
   // Handle other icons as needed
   switch (icon.name) {
@@ -139,17 +144,20 @@ const handleCloseMusicMenu = () => {
     case 'smile-o':
       onStickerPress();
       break;
+    case 'brush':
+      navigation.navigate('DrawingScreen', { image: currentMedia.uri });
+      break;
+    case 'music':
+      setIsMusicMenuVisible(true);
+      break;
     // Add more cases for other icons if needed
   }
-};
 
+  };
   const toggleTextDropdown = (event) => {
     event.stopPropagation();
     setIsTextDropdownVisible(!isTextDropdownVisible);
   };
-
-  const toggleRecordingMenu = () => setIsRecordingMenuVisible(!isRecordingMenuVisible);
-
   const closeAllDropdowns = () => {
     setIsDropdownVisible(false);
     setIsTextDropdownVisible(false);
@@ -157,9 +165,9 @@ const handleCloseMusicMenu = () => {
     setCurrentAdjustment(null);
     setIsFilterBarVisible(false);
   };
-
+  
   const scrollBarIcons = [
-  { name: 'crop', text: 'Crop', iconSet: 'Ionicons' },
+    { name: 'crop', text: 'Crop', iconSet: 'Ionicons' },
     { name: 'adjust', text: 'Contrast', iconSet: 'FontAwesome', adjustment: 'contrast' },
     { name: 'sun-o', text: 'Brightness', iconSet: 'FontAwesome', adjustment: 'brightness' },
     { name: 'thermometer-outline', text: 'Temperature', iconSet: 'Ionicons', adjustment: 'temperature' },
@@ -167,39 +175,13 @@ const handleCloseMusicMenu = () => {
     { name: 'image-filter-center-focus', text: 'Sharpness', iconSet: 'MaterialCommunityIcons', adjustment: 'sharpness' },
     { name: 'color-filter', text: 'Filters', iconSet: 'Ionicons' },
     { name: 'image-size-select-large', text: 'PIP', iconSet: 'MaterialCommunityIcons', onPress: onPIPPress },
-    { name: 'scissors', text: 'Trim', iconSet: 'FontAwesome', onPress: () => handleIconPress({ name: 'scissors' }) },
-    { name: 'smile-o', text: 'Stickers', iconSet: 'FontAwesome', onPress: onStickerPress },
-  ];
+    ...(isVideo ? [{ name: 'scissors', text: 'Trim', iconSet: 'FontAwesome', onPress: () => handleIconPress({ name: 'scissors' }) }] : []),
+    { name: 'smile-o', text: 'Stickers', iconSet: 'FontAwesome'},
+  ];  
 
-  const TextDropdown = () => {
-    const textOptions = [
-      { icon: 'add', text: 'Add Text', iconSet: 'Ionicons', onPress: onAddText },
-      { icon: 'underline', text: 'Underline', iconSet: 'FontAwesome' },
-      { icon: 'bold', text: 'Bold', iconSet: 'FontAwesome' },
-      { icon: 'arrow-up', text: 'Uppercase', iconSet: 'FontAwesome' },
-      { icon: 'arrow-down', text: 'Lowercase', iconSet: 'FontAwesome' },
-      { icon: 'color-palette', text: 'Color', iconSet: 'Ionicons' },
-    ];
-
-    return (
-      <View style={styles.textDropdown}>
-        {textOptions.map((option, index) => (
-          <TouchableOpacity key={index} style={styles.textDropdownItem} onPress={option.onPress}>
-            {option.iconSet === 'Ionicons' ? (
-              <Icon name={option.icon} size={16} color="#fff" />
-            ) : (
-              <Icon1 name={option.icon} size={16} color="#fff" />
-            )}
-            <Text style={styles.textDropdownItemText}>{option.text}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    );
-  };
-
-  const AdjustmentSlider = ({ label, value, onValueChange, min = 0, max = 2 }) => (
+   const AdjustmentSlider = ({ label, value, onValueChange, min = 0, max = 2 }) => (
     <View style={styles.adjustmentSlider}>
-      <Text style={styles.adjustText}>{label}</Text>
+      <Text style={styles.adjustText}>{label}: {value.toFixed(2)}</Text>
       <Slider
         style={styles.slider}
         minimumValue={min}
@@ -212,135 +194,112 @@ const handleCloseMusicMenu = () => {
     </View>
   );
 
-  const renderAdjustmentBar = () => {
+   const renderAdjustmentBar = () => {
     switch (currentAdjustment) {
       case 'contrast':
         return (
-          <AdjustmentSlider
-            label="Contrast"
-            value={contrastValue}
-            onValueChange={onContrastChange}
-          />
+          <View style={styles.adjustmentSlider}>
+            <Text style={styles.adjustText}>Contrast: {contrastValue.toFixed(2)}</Text>
+            <Slider
+              style={styles.slider}
+              minimumValue={0.5}
+              maximumValue={1.3}
+              value={contrastValue}
+              onValueChange={onContrastChange}
+              minimumTrackTintColor="#000000"
+              maximumTrackTintColor="#000000"
+            />
+          </View>
         );
       case 'brightness':
         return (
-          <AdjustmentSlider
-            label="Brightness"
-            value={brightnessValue}
-            onValueChange={onBrightnessChange}
-          />
+          <View style={styles.adjustmentSlider}>
+            <Text style={styles.adjustText}>Brightness: {brightnessValue.toFixed(2)}</Text>
+            <Slider
+              style={styles.slider}
+              minimumValue={-1}
+              maximumValue={1}
+              value={brightnessValue}
+              onValueChange={onBrightnessChange}
+              minimumTrackTintColor="#000000"
+              maximumTrackTintColor="#000000"
+            />
+          </View>
         );
       case 'temperature':
         return (
-          <AdjustmentSlider
-            label="Temperature"
-            value={temperatureValue}
-            onValueChange={onTemperatureChange}
-          />
+          <View style={styles.adjustmentSlider}>
+            <Text style={styles.adjustText}>Temperature: {temperatureValue.toFixed(2)}</Text>
+            <Slider
+              style={styles.slider}
+              minimumValue={-0.5}
+              maximumValue={0.5}
+              value={temperatureValue}
+              onValueChange={onTemperatureChange}
+              minimumTrackTintColor="#000000"
+              maximumTrackTintColor="#000000"
+            />
+          </View>
         );
       case 'softness':
         return (
-          <AdjustmentSlider
-            label="Softness"
-            value={softnessValue}
-            onValueChange={onSoftnessChange}
-            max={1}
-          />
+          <View style={styles.adjustmentSlider}>
+            <Text style={styles.adjustText}>Softness: {softnessValue.toFixed(2)}</Text>
+            <Slider
+              style={styles.slider}
+              minimumValue={0}
+              maximumValue={20}
+              value={softnessValue}
+              onValueChange={onSoftnessChange}
+              minimumTrackTintColor="#000000"
+              maximumTrackTintColor="#000000"
+            />
+          </View>
         );
       case 'sharpness':
         return (
-          <AdjustmentSlider
-            label="Sharpness"
-            value={sharpnessValue}
-            onValueChange={onSharpnessChange}
-            max={10}
-          />
+          <View style={styles.adjustmentSlider}>
+            <Text style={styles.adjustText}>Sharpness: {sharpnessValue.toFixed(2)}</Text>
+            <Slider
+              style={styles.slider}
+              minimumValue={-10}
+              maximumValue={10}
+              value={sharpnessValue}
+              onValueChange={onSharpnessChange}
+              minimumTrackTintColor="#000000"
+              maximumTrackTintColor="#000000"
+            />
+          </View>
         );
       default:
         return null;
     }
   };
-
-  const FilterBar = () => (
-    <ScrollView horizontal style={styles.scrollBar} showsHorizontalScrollIndicator={false}>
-      {FILTERS.map((filter, index) => (
-        <TouchableOpacity
-          key={index}
-          style={[
-            styles.scrollBarItem,
-            selectedFilter === filter && styles.selectedFilterItem
-          ]}
-          onPress={() => onSelectFilter(filter)}
-        >
-          <Text style={styles.scrollBarText}>{filter.title}</Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-  );
-
+const FilterBar = () => (
+  <ScrollView 
+    horizontal 
+    style={styles.scrollBar} 
+    contentContainerStyle={styles.scrollBarContent}
+    showsHorizontalScrollIndicator={false}
+  >
+    {FILTERS.map((filter, index) => (
+      <TouchableOpacity
+        key={index}
+        style={[
+          styles.scrollBarItem,
+          selectedFilter === filter && styles.selectedFilterItem
+        ]}
+        onPress={() => onSelectFilter(filter)}
+      >
+        <Text style={styles.scrollBarText}>{filter.title}</Text>
+      </TouchableOpacity>
+    ))}
+  </ScrollView>
+);
   return (
     <TouchableWithoutFeedback onPress={closeAllDropdowns}>
       <View style={styles.container}>
-        <View style={styles.topBar}>
-          <TouchableOpacity onPress={onBackPress}>
-            <Icon name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleMusicPress}>
-          <Icon name="musical-notes-sharp" size={24} color="#000" />
-        </TouchableOpacity>
-          <TouchableOpacity onPress={toggleDropdown} ref={downloadIconRef}>
-            <Icon name="download" size={24} color="#000" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={toggleMute}>
-            <Icon
-              name={isMuted ? "volume-mute" : "volume-high"}
-              size={24}
-              color="#000"
-            />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.centerIconsContainer}>
-          <View style={styles.leftIcons}>
-            <TouchableOpacity style={styles.centerIcon} onPress={onFriendsPress}>
-              <Icon4 name="user-friends" size={18} color="#000" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.centerIcon} onPress={onLocationPress}>
-              <Icon name="location" size={18} color="#000" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.centerIcon} onPress={handleBrushPress}>
-              <Icon name="brush" size={18} color="#000" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.centerIcon} onPress={onHashtagPress}>
-              <Icon1 name="hashtag" size={18} color="#000" />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.rightIcons}>
-            <TouchableOpacity style={styles.centerIcon} onPress={handleBrushPress}>
-              <Icon name="brush" size={18} color="#000" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.centerIcon} onPress={toggleRecordingMenu}>
-              <Icon name="mic" size={18} color="#000" />
-            </TouchableOpacity>
-            <View>
-              <TouchableOpacity style={styles.centerIcon} onPress={toggleTextDropdown}>
-                <Icon name="text" size={18} color="#000" />
-              </TouchableOpacity>
-              {isTextDropdownVisible && <TextDropdown />}
-            </View>
-          </View>
-        </View>
-
-        {isDropdownVisible && (
-          <View style={styles.dropdown}>
-            <TouchableOpacity style={styles.dropdownItem} onPress={handleSave}>
-              <Text>Save</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.dropdownItem} onPress={handleDraft}>
-              <Text>Draft</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+    
 
         {isScrollBarVisible && !currentAdjustment && !isFilterBarVisible && (
           <ScrollView horizontal style={styles.scrollBar} showsHorizontalScrollIndicator={false}>
@@ -362,12 +321,36 @@ const handleCloseMusicMenu = () => {
             ))}
           </ScrollView>
         )}
-
+       {isColorPickerVisible && (
+        <Modal visible={isColorPickerVisible} transparent={true}>
+          <TouchableWithoutFeedback onPress={() => setIsColorPickerVisible(false)}>
+            <View style={styles.colorPickerContainer}>
+              <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+                <View>
+                  <ColorPicker
+                    onColorSelected={(color) => {
+                      onTextStyle('color', color);
+                      setIsColorPickerVisible(false);
+                    }}
+                    style={{width: 300, height: 300}}
+                  />
+                  <TouchableOpacity 
+                    style={styles.closeButton} 
+                    onPress={() => setIsColorPickerVisible(false)}
+                  >
+                    <Text style={styles.closeButtonText}>Close</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </Modal>
+      )}
         {currentAdjustment && (
-          <View style={styles.adjustBar}>
-            {renderAdjustmentBar()}
-          </View>
-        )}
+  <View style={styles.adjustBar}>
+    {renderAdjustmentBar()}
+  </View>
+)}
 
         {isFilterBarVisible && <FilterBar />}
 
@@ -399,33 +382,16 @@ const handleCloseMusicMenu = () => {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 0,
+top:700,
     left: 0,
     right: 0,
     bottom: 0,
-    zIndex: 1,
+    zIndex:3
+// Add this line
+
   },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: wp('100%'),
-    paddingTop: hp('2%'),
-    paddingHorizontal: wp('4%'),
-    backgroundColor: 'white',
-  },
-  dropdown: {
-    position: 'absolute',
-    top: hp('6%'),
-    right: wp('25%'),
-    backgroundColor: 'white',
-    borderRadius: 5,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
+ 
+ 
   dropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -437,29 +403,11 @@ const styles = StyleSheet.create({
     marginLeft: wp('2%'),
     fontSize: 16,
   },
-  centerIconsContainer: {
-    position: 'absolute',
-    top: '32%',
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: wp('4%'),
-  },
-  leftIcons: {
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  rightIcons: {
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  centerIcon: {
-    marginVertical: hp('1%'),
-    padding: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    borderRadius: 30,
-  },
+scrollBarContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+},
+
   scrollBar: {
     position: 'absolute',
     bottom: hp('10%'),
@@ -469,6 +417,7 @@ const styles = StyleSheet.create({
     paddingVertical: hp('1%'),
     borderTopWidth: 1,
     borderTopColor: '#eee',
+    
   },
   scrollBarItem: {
     alignItems: 'center',
@@ -501,46 +450,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
-  textDropdown: {
-    position: 'absolute',
-    top: '110%',
-    right: -wp('20%'),
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    borderRadius: 15,
-    padding: 10,
-    width: wp('50%'),
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    zIndex: 2,
-  },
-  textDropdownItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  textDropdownItemText: {
-    marginLeft: wp('4%'),
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: '500',
-  },
-  adjustBar: {
-    position: 'absolute',
-    bottom: hp('15%'),
-    left: 0,
-    right: 0,
-    backgroundColor: 'white',
-    paddingVertical: hp('2%'),
-    paddingHorizontal: wp('4%'),
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
+
+ adjustBar: {
+  position: 'absolute',
+  bottom: hp('10%'), // Match this with scrollBar's bottom
+  left: 0,
+  right: 0,
+  backgroundColor: 'white',
+  paddingVertical: hp('1%'),
+  paddingHorizontal: wp('4%'),
+  borderTopWidth: 1,
+  borderTopColor: '#eee',
+},
   adjustmentSlider: {
     flexDirection: 'column',
     alignItems: 'stretch',
@@ -560,6 +481,38 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.1)',
     borderRadius: 5,
   },
+  speedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    color:'#fff'
+  },
+  speedText: {
+    marginLeft: -2,
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  colorPickerContainer: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  padding: 20,
+},
+colorPickerButtons: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  width: '100%',
+  marginTop: 20,
+},
+colorPickerButton: {
+  padding: 10,
+  backgroundColor: '#fff',
+  borderRadius: 5,
+},
+colorPickerButtonText: {
+  color: '#000',
+  fontWeight: 'bold',
+},
 });
 
 export default TopBar;

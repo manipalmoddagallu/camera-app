@@ -207,27 +207,30 @@ const CameraScreen = ({ navigation }) => {
   };
 
   const takePicture = async () => {
-    if (camera.current == null) {
-      Alert.alert('Camera not initialized', 'Camera is not ready yet.');
-      return;
-    }
-    try {
-      const photo = await camera.current.takePhoto({
-        quality: 1,
-        flash: flash,
-        enableShutterSound: false,
-        skipMetadata: true,
-        enableAutoStabilization: true,
-        outputOrientation: 'portrait',
-        ...(selectedFilter && selectedFilter.id !== 1 && { filter: selectedFilter.filterComponent }),
-      });
-      
-      const imagePath = Platform.OS === 'ios' ? photo.path : `file://${photo.path}`;
-      navigation.navigate('Layout_Screen', { selectedImage: imagePath });
-    } catch (error) {
-      Alert.alert('Error', `Failed to take picture: ${error.message}`);
-    }
-  };
+  if (camera.current == null) {
+    Alert.alert('Camera not initialized', 'Camera is not ready yet.');
+    return;
+  }
+  try {
+    const photo = await camera.current.takePhoto({
+      quality: 1, // Highest quality (0 to 1)
+      flash: flash,
+      enableShutterSound: false,
+      skipMetadata: false, // Keep metadata for better quality
+      enableAutoStabilization: true,
+      outputOrientation: 'portrait',
+      photoCodec: 'jpeg', // JPEG for maximum compatibility
+      format: 'jpg', // Ensure JPEG format
+      imageType: 'compressed', // Use compressed for better compatibility
+      ...(selectedFilter && selectedFilter.id !== 1 && { filter: selectedFilter.filterComponent }),
+    });
+    
+    const imagePath = Platform.OS === 'ios' ? photo.path : `file://${photo.path}`;
+    navigation.navigate('Layout_Screen', { selectedImage: imagePath });
+  } catch (error) {
+    Alert.alert('Error', `Failed to take picture: ${error.message}`);
+  }
+};
 
   const flipCamera = () => {
     if (devices.length > 0) {
@@ -268,6 +271,13 @@ const CameraScreen = ({ navigation }) => {
 
     const options = {
       flash: flash,
+      fileType: 'mp4',
+      videoCodec: 'h264', // H.264 for high quality and wide compatibility
+      videoBitRate: 8000000, // 8 Mbps for high quality, but not excessive
+      fps: 30, // 30 fps for good quality and compatibility
+      videoStabilizationMode: 'standard',
+      audioQuality: 'high',
+      audioBitRate: 128000, // 128 kbps for high-quality audio
       onRecordingFinished: (video) => {
         console.log('Video recording finished:', video);
         navigateToEditingScreen(video.path);
@@ -314,41 +324,45 @@ const navigateToEditingScreen = (videoPath) => {
   });
 };
 
-  const startBoomerangCapture = async () => {
-    if (camera.current == null) {
-      Alert.alert('Camera not initialized', 'Camera is not ready yet.');
-      return;
-    }
-    try {
-      setIsRecording(true);
-      
-      const options = {
-        flash: flash,
-        fileType: 'mp4',
-        fps: 60,
-        videoBitRate: 5000000,
-        maxDuration: 1,
-        onRecordingFinished: (video) => {
-          processBoomerangVideo(video.path);
-        },
-        onRecordingError: (error) => {
-          Alert.alert('Error', 'Failed to record boomerang video. Please try again.');
-        },
-      };
+ const startBoomerangCapture = async () => {
+  if (camera.current == null) {
+    Alert.alert('Camera not initialized', 'Camera is not ready yet.');
+    return;
+  }
+  try {
+    setIsRecording(true);
+    
+    const options = {
+      flash: flash,
+      fileType: 'mp4',
+      videoCodec: 'h264',
+      videoBitRate: 8000000, // 8 Mbps for high quality
+      fps: 30, // 30 fps for good quality and compatibility
+      maxDuration: 1,
+      videoStabilizationMode: 'standard',
+      audioQuality: 'high',
+      audioBitRate: 128000,
+      onRecordingFinished: (video) => {
+        processBoomerangVideo(video.path);
+      },
+      onRecordingError: (error) => {
+        Alert.alert('Error', 'Failed to record boomerang video. Please try again.');
+      },
+    };
 
-      await camera.current.startRecording(options);
-      
-      setTimeout(() => {
-        if (camera.current) {
-          camera.current.stopRecording();
-        }
-        setIsRecording(false);
-      }, 1000);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to start boomerang recording. Please try again.');
+    await camera.current.startRecording(options);
+    
+    setTimeout(() => {
+      if (camera.current) {
+        camera.current.stopRecording();
+      }
       setIsRecording(false);
-    }
-  };
+    }, 1000);
+  } catch (error) {
+    Alert.alert('Error', 'Failed to start boomerang recording. Please try again.');
+    setIsRecording(false);
+  }
+};
 
   const processBoomerangVideo = async (videoPath) => {
   console.log('Processing boomerang video:', videoPath);
@@ -604,7 +618,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 20,
     alignSelf: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: '#4CBB17',
     padding: 10,
     borderRadius: 5,
   },
@@ -612,7 +626,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     left: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: '#4CBB17',
     padding: 10,
     borderRadius: 5,
   },
@@ -620,15 +634,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: '#4CBB17',
     padding: 10,
     borderRadius: 5,
+    color: '#4CBB17'
   },
   takePictureButton: {
     position: 'absolute',
     bottom: 20,
     alignSelf: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: '#4CBB17',
     padding: 10,
     borderRadius: 5,
   },
@@ -646,7 +661,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 70,
     alignSelf: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: '#4CBB17',
     padding: 5,
     borderRadius: 5,
   },
@@ -659,7 +674,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 20,
     right: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: '#4CBB17',
     padding: 10,
     borderRadius: 5,
   },

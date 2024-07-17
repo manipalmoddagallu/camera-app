@@ -12,6 +12,7 @@ import GalleryPicker from './screens/GalleryPicker';
 import TrimScreen from './screens/TrimScreen';
 import MusicMenu from './screens/MusicMenu';
 import UploadScreen from './screens/UploadScreen';
+import VideoCropScreen from './screens/VideoCropScreen';
 
 
 const Stack = createStackNavigator();
@@ -41,6 +42,7 @@ const App = () => {
         <Stack.Screen name="GalleryPicker" component={GalleryPicker}options={{ headerShown: false }} />
         <Stack.Screen name="TrimScreen" component={TrimScreen} />
         <Stack.Screen name="UploadScreen" component={UploadScreen}options={{ headerShown: false }} />
+        <Stack.Screen name="VideoCropScreen" component={VideoCropScreen}options={{ headerShown: false }} />
 
       </Stack.Navigator>
     </NavigationContainer>

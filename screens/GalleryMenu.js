@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, FlatList, Image, Modal } from 'react-native';
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
@@ -11,10 +12,15 @@ const GalleryMenu = ({ isVisible, onClose, onImageSelect }) => {
   const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState('gallery');
   const [galleryImages, setGalleryImages] = useState([]);
+  const [draftedMedia, setDraftedMedia] = useState([]);
 
   useEffect(() => {
-    if (isVisible && activeTab === 'gallery') {
-      loadGalleryImages();
+    if (isVisible) {
+      if (activeTab === 'gallery') {
+        loadGalleryImages();
+      } else if (activeTab === 'draft') {
+        loadDraftedMedia();
+      }
     }
   }, [isVisible, activeTab]);
 
@@ -30,13 +36,25 @@ const GalleryMenu = ({ isVisible, onClose, onImageSelect }) => {
     }
   };
 
-  const handleImageSelect = (image) => {
-    const imageUri = image.node.image.uri;
-    console.log('Selected image URI in GalleryMenu:', imageUri);
-    onImageSelect(imageUri);
-    onClose();
+  const loadDraftedMedia = async () => {
+    try {
+      const drafts = await AsyncStorage.getItem('draftedMedia');
+      if (drafts) {
+        setDraftedMedia(JSON.parse(drafts));
+      }
+    } catch (error) {
+      console.error('Error loading drafted media:', error);
+    }
   };
 
+const handleImageSelect = (image, isDraft = false) => {
+  if (isDraft) {
+    onImageSelect(image.editedImageUri || image.uri, image);
+  } else {
+    onImageSelect(image.node.image.uri, null);
+  }
+  onClose();
+};
   const renderGalleryItem = ({ item }) => (
     <TouchableOpacity onPress={() => handleImageSelect(item)}>
       <Image
@@ -45,6 +63,15 @@ const GalleryMenu = ({ isVisible, onClose, onImageSelect }) => {
       />
     </TouchableOpacity>
   );
+
+ const renderDraftItem = ({ item }) => (
+  <TouchableOpacity onPress={() => handleImageSelect(item, true)}>
+    <Image
+      source={{ uri: item.editedImageUri || item.uri }}
+      style={{ width: wp('30%'), height: wp('30%'), margin: 2 }}
+    />
+  </TouchableOpacity>
+);
 
   const renderContent = () => {
     return activeTab === 'gallery' ? (
@@ -55,7 +82,12 @@ const GalleryMenu = ({ isVisible, onClose, onImageSelect }) => {
         numColumns={3}
       />
     ) : (
-      <Text>Draft content goes here</Text>
+      <FlatList
+        data={draftedMedia}
+        renderItem={renderDraftItem}
+        keyExtractor={(item, index) => index.toString()}
+        numColumns={3}
+      />
     );
   };
 
@@ -91,9 +123,6 @@ const GalleryMenu = ({ isVisible, onClose, onImageSelect }) => {
     </Modal>
   );
 };
-
-
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

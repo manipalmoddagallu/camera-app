@@ -1,6 +1,6 @@
 // MusicMenu.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, TextInput, ImageBackground } from 'react-native';
 import Modal from 'react-native-modal';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import axios from 'axios';
@@ -98,7 +98,7 @@ const MusicMenu = ({ isVisible, onClose, onSelectMusic }) => {
     >
       <Text style={styles.musicTitle}>{item.title}</Text>
       <TouchableOpacity onPress={() => isPlaying ? stopMusic() : playMusic(item)}>
-        <Text>{isPlaying ? 'Stop' : 'Play'}</Text>
+        <Text style={styles.playStopText}>{isPlaying ? 'Stop' : 'Play'}</Text>
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -110,49 +110,73 @@ const MusicMenu = ({ isVisible, onClose, onSelectMusic }) => {
       onSwipeComplete={onClose}
       swipeDirection={['down']}
       style={styles.modal}
+      backdropOpacity={0}
+      animationIn="slideInUp"
+      animationOut="slideOutDown"
     >
-      <View style={styles.container}>
-        <View style={styles.tabs}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'device' && styles.activeTab]}
-            onPress={() => setActiveTab('device')}
-          >
-            <Text>Music</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'online' && styles.activeTab]}
-            onPress={() => setActiveTab('online')}
-          >
-            <Text>Online Music</Text>
-          </TouchableOpacity>
+     
+        <View style={styles.overlay}>
+         <ImageBackground 
+        source={require('./assets/images/BG.png')} // Adjust the path as needed
+        style={styles.backgroundImage}
+      >
+       
+            <View style={styles.tabs}>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'device' && styles.activeTab]}
+                onPress={() => setActiveTab('device')}
+              >
+                <Text style={styles.tabText}>Music</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'online' && styles.activeTab]}
+                onPress={() => setActiveTab('online')}
+              >
+                <Text style={styles.tabText}>Online Music</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search music..."
+              placeholderTextColor="#999"
+              value={searchText}
+              onChangeText={setSearchText}
+            />
+            <FlatList
+              data={filteredMusic}
+              renderItem={renderMusicItem}
+              keyExtractor={(item) => item.id.toString()}
+            />
+        
+                </ImageBackground>
         </View>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search music..."
-          value={searchText}
-          onChangeText={setSearchText}
-        />
-        <FlatList
-          data={filteredMusic}
-          renderItem={renderMusicItem}
-          keyExtractor={(item) => item.id.toString()}
-        />
-      </View>
+
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
   modal: {
-    justifyContent: 'flex-end',
     margin: 0,
+    justifyContent: 'flex-end',
+  },
+  backgroundImage: {
+      height: hp('50%'),
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  overlay: {
+    height: hp('50%'),
   },
   container: {
-    backgroundColor: 'white',
     height: hp('50%'),
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
   },
   tabs: {
     flexDirection: 'row',
@@ -166,14 +190,19 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   activeTab: {
-    borderBottomColor: 'black',
+    borderBottomColor: '#000',
+  },
+  tabText: {
+    color: '#000',
+    fontWeight: 'bold',
   },
   searchInput: {
     borderWidth: 1,
-    borderColor: 'gray',
+    borderColor: '#999',
     borderRadius: 5,
     padding: 10,
     marginBottom: 10,
+    color: '#000',
   },
   musicItem: {
     flexDirection: 'row',
@@ -181,10 +210,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'lightgray',
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
   musicTitle: {
     fontSize: 16,
+    color: '#000',
+  },
+  playStopText: {
+    color: '#0066cc',
+    fontWeight: 'bold',
   },
 });
 

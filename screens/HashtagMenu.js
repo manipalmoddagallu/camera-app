@@ -1,9 +1,9 @@
 // HashtagMenu.js
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, ImageBackground } from 'react-native';
 import { heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { hashtags } from './utils/DemoData'; // Import the hashtags from your data file
+import { hashtags } from './utils/DemoData';
 
 const HashtagMenu = ({ onSelectHashtag, onClose }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,41 +34,54 @@ const HashtagMenu = ({ onSelectHashtag, onClose }) => {
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Add Hashtags</Text>
-        <TouchableOpacity onPress={onClose}>
-          <Icon name="close" size={24} color="#000" />
+    <ImageBackground
+      source={require('./assets/images/BG.png')}
+      style={styles.container}
+    >
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Add Hashtags</Text>
+          <TouchableOpacity onPress={onClose}>
+            <Icon name="close" size={24} color="#000" />
+          </TouchableOpacity>
+        </View>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search hashtags"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        <FlatList
+          data={filteredHashtags}
+          renderItem={renderHashtag}
+          keyExtractor={item => item.id.toString()}
+          numColumns={3}
+          contentContainerStyle={styles.flatListContent}
+        />
+        <TouchableOpacity 
+          style={styles.doneButton} 
+          onPress={() => {
+            onSelectHashtag(selectedHashtags);
+            onClose();
+          }}
+        >
+          <Text style={styles.doneButtonText}>Done</Text>
         </TouchableOpacity>
       </View>
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Search hashtags"
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-      />
-      <FlatList
-        data={filteredHashtags}
-        renderItem={renderHashtag}
-        keyExtractor={item => item.id.toString()}
-        numColumns={3}
-      />
-      <TouchableOpacity style={styles.doneButton} onPress={() => {
-        onSelectHashtag(selectedHashtags);
-        onClose();
-      }}>
-        <Text style={styles.doneButtonText}>Done</Text>
-      </TouchableOpacity>
-    </View>
+    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     height: hp('50%'),
-    backgroundColor: 'white',
+    width: '100%',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    overflow: 'hidden',
+  },
+  content: {
+    flex: 1,
     padding: 20,
   },
   header: {
@@ -82,29 +95,32 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   searchInput: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'rgba(240, 240, 240, 0.7)',
     borderRadius: 10,
     padding: 10,
     marginBottom: 20,
   },
+  flatListContent: {
+    paddingVertical: 10,
+  },
   hashtagItem: {
     margin: 5,
     padding: 10,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'rgba(240, 240, 240, 0.7)',
     borderRadius: 5,
   },
   selectedHashtag: {
-    backgroundColor: '#007AFF',
+    backgroundColor: 'rgba(0, 122, 255, 0.7)',
   },
   hashtagText: {
     color: '#000',
   },
   doneButton: {
-    marginTop: 20,
     padding: 10,
     backgroundColor: '#007AFF',
     borderRadius: 5,
     alignItems: 'center',
+    marginTop: 10,
   },
   doneButtonText: {
     color: '#fff',
