@@ -29,7 +29,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import ZoomableImage from './ZoomableImage'; // Make sure to import at the top of your file
 
-
 const LayoutScreen = (props = ({route}) => {
   const navigation = useNavigation();
   const selectedImages = route.params;
@@ -38,13 +37,11 @@ const LayoutScreen = (props = ({route}) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedLayoutId, setSelectedLayoutId] = useState(null);
   const [layoutData, setLayoutData] = useState([]);
-  
-
   console.log('layoutDatalayoutData', layoutData);
-
 const MovableImage = ({ source, containerStyle }) => {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
+  const viewShotRef = useRef(null);
 
   const panGestureHandler = useAnimatedGestureHandler({
     onStart: (_, context) => {
@@ -110,17 +107,25 @@ const MovableImage = ({ source, containerStyle }) => {
     });
     return allImages;
   };
+const handleSaveAndNavigate = () => {
+  const selectedImages = getAllSelectedImages();
+  console.log('Selected Images:', selectedImages);
+  
+  // Create a media object from the first selected image
+  const firstImage = selectedImages[0];
+  const mediaFromLayout = firstImage ? {
+    uri: firstImage.image,
+    type: 'photo',
+    isFromLayout: true  // Flag to indicate this is from a layout
+  } : null;
 
-  const handleSaveAndNavigate = () => {
-    const selectedImages = getAllSelectedImages();
-    console.log('Selected Images:', selectedImages);
-    navigation.navigate('EditingScreen', {
-      selectedLayoutImages: selectedImages,
-      selectedLayoutId: selectedLayoutId,
-      layoutData: layoutData,
-    });
-  };
-
+  navigation.navigate('EditingScreen', {
+    media: mediaFromLayout,
+    selectedLayoutImages: selectedImages,
+    selectedLayoutId: selectedLayoutId,
+    layoutData: layoutData,
+  });
+};
   const openImagePicker = (id, tabId) => {
     ImagePicker.openPicker({})
       .then(image => {
@@ -155,7 +160,7 @@ const MovableImage = ({ source, containerStyle }) => {
   });
 };
   
-  const getSelectedImage = (layoutId, tabId) => {
+const getSelectedImage = (layoutId, tabId) => {
   console.log('Getting image for layout:', layoutId, 'tab:', tabId);
   const layout = layoutData.find(item => item.id === layoutId);
   if (layout) {
@@ -166,9 +171,6 @@ const MovableImage = ({ source, containerStyle }) => {
   console.log('No layout found');
   return null;
 };
-
-
-
   return (
     <View style={styles.container}>
       <View style={styles.selectedLayoutContainer}>
@@ -179,20 +181,20 @@ const MovableImage = ({ source, containerStyle }) => {
                 onPress={() => openImagePicker(selectedLayoutId, 1)}
                 style={styles.layout4ColView}>
                 {getSelectedImage(0, 1) ? (
-  <View style={{ width: '100%', height: '100%' }}>
-    <ZoomableImage
-      source={{uri: getSelectedImage(0, 1)}}
-      style={styles.ImagesView}
-     
-      onError={(e) => console.error('Image load error:', e.nativeEvent.error)}
-    />
-  </View>
-) : (
-  <>
-    <Text style={{fontSize: 25}}> + </Text>
-    <Text>Select Image</Text>
-  </>
-)}
+                  <View style={{ width: '100%', height: '100%' }}>
+                    <Image
+                      source={{uri: getSelectedImage(0, 1)}}
+                      style={styles.ImagesView}
+                    
+                      onError={(e) => console.error('Image load error:', e.nativeEvent.error)}
+                    />
+                  </View>
+                ) : (
+                  <>
+                    <Text style={{fontSize: 25}}> + </Text>
+                    <Text>Select Image</Text>
+                  </>
+                )}
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -387,587 +389,6 @@ const MovableImage = ({ source, containerStyle }) => {
               )}
             </TouchableOpacity>
           </View>
-        ) : selectedLayoutId === 5 ? (
-          <View style={styles.flexcenter}>
-            <View style={styles.mainView}>
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 1)}
-                style={[styles.touchView, styles.rightBorder]}>
-                {getSelectedImage(5, 1) ? (
-                  <Image
-                    source={{uri: getSelectedImage(5, 1)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 2)}
-                style={[styles.touchView, styles.rightBorder]}>
-                {getSelectedImage(5, 2) ? (
-                  <Image
-                    source={{uri: getSelectedImage(5, 2)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-              {/* Third Column */}
-              <TouchableOpacity
-                style={[styles.imageview, {flex: 1}]}
-                onPress={() => openImagePicker(selectedLayoutId, 3)}>
-                {getSelectedImage(5, 3) ? (
-                  <Image
-                    source={{uri: getSelectedImage(5, 3)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {/* Second Row */}
-            <View style={{flex: 1, flexDirection: 'row'}}>
-              {/* Fourth Column */}
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 4)}
-                style={[styles.touchView, {flex: 1}]}>
-                {getSelectedImage(5, 4) ? (
-                  <Image
-                    source={{uri: getSelectedImage(5, 4)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-              {/* Fifth Column */}
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 5)}
-                style={[styles.imageview, {flex: 1}]}>
-                {getSelectedImage(5, 5) ? (
-                  <Image
-                    source={{uri: getSelectedImage(5, 5)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : selectedLayoutId === 6 ? (
-          <View style={styles.flexcenter}>
-            <View style={styles.mainView}>
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 1)}
-                style={[styles.imageview, styles.rightBorder]}>
-                {getSelectedImage(6, 1) ? (
-                  <ZoomableImage
-                    source={{uri: getSelectedImage(6, 1)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 2)}
-                style={[styles.imageview, {flex: 1}]}>
-                {getSelectedImage(6, 2) ? (
-                  <ZoomableImage
-                    source={{uri: getSelectedImage(6, 2)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.mainView}>
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 3)}
-                style={[styles.imageview, styles.rightBorder]}>
-                {getSelectedImage(6, 3) ? (
-                  <ZoomableImage
-                    source={{uri: getSelectedImage(6, 3)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 4)}
-                style={[styles.imageview, {flex: 1}]}>
-                {getSelectedImage(6, 4) ? (
-                  <ZoomableImage
-                    source={{uri: getSelectedImage(6, 4)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            <View style={{flex: 1, flexDirection: 'row'}}>
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 5)}
-                style={[styles.imageview, styles.rightBorder]}>
-                {getSelectedImage(6, 5) ? (
-                  <ZoomableImage
-                    source={{uri: getSelectedImage(6, 5)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-              {/* Sixth Column */}
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 6)}
-                style={[styles.imageview, styles.rightBorder]}>
-                {getSelectedImage(6, 6) ? (
-                  <ZoomableImage
-                    source={{uri: getSelectedImage(6, 6)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-              {/* Seventh Column */}
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 7)}
-                style={[styles.imageview, styles.rightBorder]}>
-                {getSelectedImage(6, 7) ? (
-                  <ZoomableImage
-                    source={{uri: getSelectedImage(6, 7)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-              {/* Eighth Column */}
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 8)}
-                style={[styles.imageview, {flex: 1}]}>
-                {getSelectedImage(6, 8) ? (
-                  <ZoomableImage
-                    source={{uri: getSelectedImage(6, 8)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : selectedLayoutId === 7 ? (
-          <View style={styles.layoutRowcenter}>
-            {/* First Column */}
-            <View style={[styles.rightBorder, {flexDirection: 'column'}]}>
-              <View style={{flex: 1, flexDirection: 'row'}}>
-                <TouchableOpacity
-                  onPress={() => openImagePicker(selectedLayoutId, 1)}
-                  style={[styles.imageview, styles.rightBorder]}>
-                  {getSelectedImage(7, 1) ? (
-                    <ZoomableImage
-                      source={{uri: getSelectedImage(7, 1)}}
-                      style={styles.ImagesView}
-                    />
-                  ) : (
-                    <>
-                      <Text style={{fontSize: 25}}> + </Text>
-                      <Text>Select Image</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => openImagePicker(selectedLayoutId, 2)}
-                  style={[styles.imageview, {flex: 1}]}>
-                  {getSelectedImage(7, 2) ? (
-                    <ZoomableImage
-                      source={{uri: getSelectedImage(7, 2)}}
-                      style={styles.ImagesView}
-                    />
-                  ) : (
-                    <>
-                      <Text style={{fontSize: 25}}> + </Text>
-                      <Text>Select Image</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 3)}
-                style={[styles.imageview, styles.topBorder]}>
-                {getSelectedImage(7, 3) ? (
-                  <ZoomableImage
-                    source={{uri: getSelectedImage(7, 3)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              <View style={{flex: 1, borderTopWidth: hp('0.3%')}}>
-                <View style={{flex: 1, flexDirection: 'row'}}>
-                  <TouchableOpacity
-                    onPress={() => openImagePicker(selectedLayoutId, 4)}
-                    style={[styles.imageview, styles.rightBorder]}>
-                    {getSelectedImage(7, 4) ? (
-                      <ImaZoomableImagege
-                        source={{uri: getSelectedImage(7, 4)}}
-                        style={styles.ImagesView}
-                      />
-                    ) : (
-                      <>
-                        <Text style={{fontSize: 25}}> + </Text>
-                        <Text>Select Image</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => openImagePicker(selectedLayoutId, 5)}
-                    style={[styles.imageview, {flex: 1}]}>
-                    {getSelectedImage(7, 5) ? (
-                      <ZoomableImage
-                        source={{uri: getSelectedImage(7, 5)}}
-                        style={styles.ImagesView}
-                      />
-                    ) : (
-                      <>
-                        <Text style={{fontSize: 25}}> + </Text>
-                        <Text>Select Image</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => openImagePicker(selectedLayoutId, 6)}
-              style={[styles.imageview, {flex: 1}]}>
-              {getSelectedImage(7, 6) ? (
-                <ZoomableImage
-                  source={{uri: getSelectedImage(7, 6)}}
-                  style={styles.ImagesView}
-                />
-              ) : (
-                <>
-                  <Text style={{fontSize: 25}}> + </Text>
-                  <Text>Select Image</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-        ) : selectedLayoutId === 8 ? (
-          <View style={styles.flexcolumn}>
-            <View style={{flex: 1, flexDirection: 'row'}}>
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 1)}
-                style={[
-                  styles.imageview,
-                  {flex: 2, borderWidth: 3, borderRadius: 5, margin: 1},
-                ]}>
-                {getSelectedImage(8, 1) ? (
-                  <ZoomableImage
-                    source={{uri: getSelectedImage(8, 1)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              {/* Second Row - Small */}
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 2)}
-                style={[
-                  styles.imageview,
-                  {flex: 1, borderWidth: 3, borderRadius: 5, margin: 1},
-                ]}>
-                {getSelectedImage(8, 2) ? (
-                  <ZoomableImage
-                    source={{uri: getSelectedImage(8, 2)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            <View style={{marginTop: 1}} />
-            <View style={{flex: 1, flexDirection: 'row'}}>
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 3)}
-                style={[
-                  styles.imageview,
-                  {flex: 1, borderWidth: 3, borderRadius: 5, margin: 1},
-                ]}>
-                {getSelectedImage(8, 3) ? (
-                  <ZoomableImage
-                    source={{uri: getSelectedImage(8, 3)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              {/* Second Row - Big */}
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 4)}
-                style={[
-                  styles.imageview,
-                  {flex: 2, borderWidth: 3, borderRadius: 5, margin: 1},
-                ]}>
-                {getSelectedImage(8, 4) ? (
-                  <ZoomableImage
-                    source={{uri: getSelectedImage(8, 4)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : selectedLayoutId === 9 ? (
-          <View style={styles.flexstart}>
-            <View style={styles.flexRow}>
-              <View style={[styles.rightBorder, {flexDirection: 'column'}]}>
-                {/* First Row - Big */}
-                <TouchableOpacity
-                  style={[styles.imageview, {flex: 2, borderBottomWidth: 3}]}
-                  onPress={() => openImagePicker(selectedLayoutId, 1)}>
-                  {getSelectedImage(9, 1) ? (
-                    <ZoomableImage
-                      source={{uri: getSelectedImage(9, 1)}}
-                      style={styles.ImagesView}
-                    />
-                  ) : (
-                    <>
-                      <Text style={{fontSize: 25}}> + </Text>
-                      <Text>Select Image</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-                {/* Second Row - Small */}
-                <TouchableOpacity
-                  style={styles.touchviews}
-                  onPress={() => openImagePicker(selectedLayoutId, 2)}>
-                  {getSelectedImage(9, 2) ? (
-                    <ZoomableImage
-                      source={{uri: getSelectedImage(9, 2)}}
-                      style={styles.ImagesView}
-                    />
-                  ) : (
-                    <>
-                      <Text style={{fontSize: 25}}> + </Text>
-                      <Text>Select Image</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-
-              {/* Second Row */}
-              <View style={{flex: 2, flexDirection: 'column'}}>
-                {/* First Row - Small */}
-                <TouchableOpacity
-                  style={styles.touchviews}
-                  onPress={() => openImagePicker(selectedLayoutId, 3)}>
-                  {getSelectedImage(9, 3) ? (
-                    <ZoomableImage
-                      source={{uri: getSelectedImage(9, 3)}}
-                      style={styles.ImagesView}
-                    />
-                  ) : (
-                    <>
-                      <Text style={{fontSize: 25}}> + </Text>
-                      <Text>Select Image</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-                {/* Second Row - Big */}
-                <TouchableOpacity
-                  style={[styles.touchviews, {borderTopWidth: 3}]}
-                  onPress={() => openImagePicker(selectedLayoutId, 4)}>
-                  {getSelectedImage(9, 4) ? (
-                    <ZoomableImage
-                      source={{uri: getSelectedImage(9, 4)}}
-                      style={styles.ImagesView}
-                    />
-                  ) : (
-                    <>
-                      <Text style={{fontSize: 25}}> + </Text>
-                      <Text>Select Image</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        ) : selectedLayoutId === 10 ? (
-          <View style={styles.layout10}>
-            <View style={[styles.rightBorder, {flexDirection: 'column'}]}>
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 1)}
-                style={styles.touchviews}>
-                {getSelectedImage(10, 1) ? (
-                  <ZoomableImage
-                    source={{uri: getSelectedImage(10, 1)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {/* Second Row */}
-            <View style={{flex: 2, flexDirection: 'column'}}>
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 2)}
-                style={styles.touchviews}>
-                {getSelectedImage(10, 2) ? (
-                  <ZoomableImage
-                    source={{uri: getSelectedImage(10, 2)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-              {/* Second Row - Big */}
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 3)}
-                style={[styles.touchviews, {borderTopWidth: 3}]}>
-                {getSelectedImage(10, 3) ? (
-                  <ZoomableImage
-                    source={{uri: getSelectedImage(10, 3)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : selectedLayoutId === 11 ? (
-          <View style={styles.flexcolumn2}>
-            <View style={{flex: 1, flexDirection: 'row'}}>
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 1)}
-                style={[styles.borderwidth, {flex: 1}]}>
-                {getSelectedImage(11, 1) ? (
-                  <ZoomableImage
-                    source={{uri: getSelectedImage(11, 1)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => openImagePicker(selectedLayoutId, 2)}
-                style={[styles.borderwidth, {flex: 2}]}>
-                {getSelectedImage(11, 2) ? (
-                  <ZoomableImage
-                    source={{uri: getSelectedImage(11, 2)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
         ) : (
           <View style={styles.flexstart}></View>
         )}
@@ -994,16 +415,16 @@ const MovableImage = ({ source, containerStyle }) => {
               <Text style={styles.txt}>Layouts</Text>
             </View>
             <TouchableOpacity
-              onPress={() => handleSaveAndNavigate()}
-              style={styles.nextbutn}>
-              <View style={{flexDirection: 'row'}}>
-                <Text style={{fontSize: 18, color: 'white'}}>Next</Text>
-                <Image
-                  style={{width: 20, height: 20}}
-                  source={images.Rightarrow}
-                />
-              </View>
-            </TouchableOpacity>
+  onPress={() => handleSaveAndNavigate()}
+  style={styles.nextbutn}>
+  <View style={{flexDirection: 'row'}}>
+    <Text style={{fontSize: 18, color: 'white'}}>Next</Text>
+    <Image
+      style={{width: 20, height: 20}}
+      source={images.Rightarrow}
+    />
+  </View>
+</TouchableOpacity>
           </View>
 
           <View style={styles.layoutView}>

@@ -4,7 +4,7 @@ import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-nat
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { friendsData } from './utils/DemoData';
 import { images } from './assets/images/image';
-import { PanGestureHandler, State } from 'react-native-gesture-handler';
+import { PanGestureHandler } from 'react-native-gesture-handler';
 
 const FriendsList = ({ onAddFriend, onClose }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,54 +29,55 @@ const FriendsList = ({ onAddFriend, onClose }) => {
 
   return (
     <PanGestureHandler onGestureEvent={handleGestureEvent}>
-      <View style={styles.container}>
-        <ImageBackground
-          source={images.BG}
-          style={styles.backgroundImage}
-        >
-          <View style={styles.header}>
-            <Text style={styles.title}>Add Friends</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Icon name="times" size={24} color="#000" />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.searchBarContainer}>
-            <Icon name="search" size={20} color="#888" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchBar}
-              placeholder="Search friends..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
-          <FlatList
-            data={filteredFriends}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={styles.friendItem} onPress={() => handleAddFriend(item)}>
-                <Text style={styles.friendName}>
-                  {addedFriends.includes(item.id) ? `${item.name} (Added)` : item.name}
-                </Text>
-                {!addedFriends.includes(item.id) && (
-                  <View style={styles.addButton}>
-                    <Text style={styles.addButtonText}>Add</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            )}
+      <ImageBackground
+        source={images.BG}
+        style={styles.backgroundImage}
+      >
+        <View style={styles.header}>
+          <Text style={styles.title}>Add Friends</Text>
+          <TouchableOpacity onPress={onClose}>
+            <Icon name="times" size={24} color="#000" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.searchBarContainer}>
+          <Icon name="search" size={20} color="#888" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchBar}
+            placeholder="Search friends..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
           />
-        </ImageBackground>
-      </View>
+        </View>
+        <FlatList
+          data={filteredFriends}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => (
+            <TouchableOpacity style={styles.friendItem} onPress={() => handleAddFriend(item)}>
+              <Text style={styles.friendName}>
+                {addedFriends.includes(item.id) ? `${item.name} (Added)` : item.name}
+              </Text>
+              {!addedFriends.includes(item.id) && (
+                <View style={styles.addButton}>
+                  <Text style={styles.addButtonText}>Add</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
+        />
+      </ImageBackground>
     </PanGestureHandler>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    height: hp('50%'),
-    backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+  backgroundImage: {
+    height: hp('40%'),
+    width: '100%',
+    justifyContent: 'center',
+    resizeMode: 'cover',
+    borderTopLeftRadius: wp('5%'),
+    borderTopRightRadius: wp('5%'),
+    overflow: 'hidden',
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -85,63 +86,56 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    overflow: 'hidden',
-  },
-  backgroundImage: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    resizeMode: 'cover',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
-    paddingHorizontal: 20,
+    marginBottom: hp('2%'),
+    paddingHorizontal: wp('5%'),
   },
   title: {
-    fontSize: 18,
+    fontSize: wp('4.5%'),
     fontWeight: 'bold',
   },
   searchBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    marginBottom: 15,
-    marginHorizontal: 20,
+    backgroundColor: 'rgba(240, 240, 240, 0.7)',
+    borderRadius: wp('5%'),
+    paddingHorizontal: wp('2.5%'),
+    marginBottom: hp('2%'),
+    marginHorizontal: wp('5%'),
   },
   searchIcon: {
-    marginRight: 10,
+    marginRight: wp('2.5%'),
   },
   searchBar: {
     flex: 1,
-    height: 40,
+    height: hp('5%'),
   },
   friendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingVertical: hp('1.5%'),
+    paddingHorizontal: wp('5%'),
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#000',
   },
   friendName: {
-    fontSize: 16,
+    fontSize: wp('4%'),
     flex: 1,
+    color: '#000'
   },
   addButton: {
     backgroundColor: '#4a9c2d',
-    borderRadius: 5,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
+    borderRadius: wp('1%'),
+    paddingVertical: hp('0.7%'),
+    paddingHorizontal: wp('2.5%'),
   },
   addButtonText: {
     color: 'white',
-    fontSize: 14,
+    fontSize: wp('3.5%'),
   },
 });
 

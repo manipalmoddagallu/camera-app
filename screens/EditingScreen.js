@@ -10,7 +10,7 @@ import {
   Modal,
   Animated,
   TouchableOpacity,
-  Platform,TextInput,ScrollView,ActivityIndicator,TouchableWithoutFeedback
+  Platform,TextInput,ScrollView,ActivityIndicator
 } from 'react-native';
 import Video from 'react-native-video';
 import {
@@ -33,17 +33,27 @@ import ViewShot from "react-native-view-shot";
 import Icon from 'react-native-vector-icons/Ionicons';
 import Icon1 from 'react-native-vector-icons/FontAwesome';
 import Icon2 from 'react-native-vector-icons/MaterialCommunityIcons';
-import Icon3 from 'react-native-vector-icons/MaterialIcons';
+import Icon3 from 'react-native-vector-icons/FontAwesome5';
 import Icon4 from 'react-native-vector-icons/Entypo';
 import MusicMenu from './MusicMenu';
 import RecordingMenu from './RecordingMenu';
 import ColorPicker from 'react-native-wheel-color-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import LayoutView from './Layouts/LayoutView';
 
 const EditingScreen = ({ route, navigation }) => {
-  const { media = null, filterIndex = -1, draftedMedia = null,originalImageUri= null } = route?.params || {};
-  const [currentMedia, setCurrentMedia] = useState(media);
+ const { 
+    media = null, 
+    filterIndex = -1, 
+    draftedMedia = null,
+    originalImageUri = null, 
+    selectedLayoutImages = [],
+    selectedLayoutId = null,
+    layoutData = []
+  } = route?.params || {};
+    const [currentMedia, setCurrentMedia] = useState(media);
+    const [isFromLayout, setIsFromLayout] = useState(false);
+
   const [isVideo, setIsVideo] = useState(media?.type === 'video' || media?.type === 'boomerang');
   const [selectedFilter, setSelectedFilter] = useState(FILTERS[filterIndex] || null);
   const [selectedHashtags, setSelectedHashtags] = useState([]);
@@ -55,9 +65,7 @@ const EditingScreen = ({ route, navigation }) => {
   const [pipImage, setPipImage] = useState(null);
   const [pipFlipped, setPipFlipped] = useState(false);
   const [isPipMenuVisible, setIsPipMenuVisible] = useState(false);
-  const [pipBackgroundSize, setPipBackgroundSize] = useState(wp('32%')); // Initial background size
-
-  const [pipSize, setPipSize] = useState(wp('45%'));
+  const [pipSize, setPipSize] = useState(wp('25%'));
   const [pipBackgroundColor, setPipBackgroundColor] = useState('rgba(0, 0, 0, 0.5)');
   const [pipOpacity, setPipOpacity] = useState(1);
   const [pipRotation, setPipRotation] = useState(0);
@@ -77,6 +85,7 @@ const EditingScreen = ({ route, navigation }) => {
   const [viewShotRef, setViewShotRef] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+  const [isMusicMenuVisible, setIsMusicMenuVisible] = useState(false);
   const [isTextDropdownVisible, setIsTextDropdownVisible] = useState(false);
   const [isRecordingMenuVisible, setIsRecordingMenuVisible] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
@@ -85,7 +94,6 @@ const EditingScreen = ({ route, navigation }) => {
   const [selectedStickers, setSelectedStickers] = useState([]);
   const [isStickerBarVisible, setIsStickerBarVisible] = useState(false);
   const [isLoadingStickers, setIsLoadingStickers] = useState(false);
-  const [isMusicMenuVisible, setIsMusicMenuVisible] = useState(false);
   const handleFriendsPress = () => setIsFriendsListVisible(true);
   const handleHashtagPress = () => setIsHashtagMenuVisible(true);
   const handleLocationPress = () => setIsLocationMenuVisible(true);
@@ -95,95 +103,65 @@ const EditingScreen = ({ route, navigation }) => {
   const handlePipMenuPress = () => setIsPipMenuVisible(true);
   const handleClosePipMenu = () => setIsPipMenuVisible(false);
   const handleSelectFilter = (filter) => setSelectedFilter(filter);
-  const [isPipSelected, setIsPipSelected] = useState(false);
   const SelectedFilterComponent = selectedFilter ? selectedFilter.filterComponent : null;
   const [previewImage, setPreviewImage] = useState(null);
-  const toggleTextDropdown = () => {
-    setIsTextDropdownVisible(!isTextDropdownVisible);
-  };
-const [isPreviewVisible, setIsPreviewVisible] = useState(false);
-  const toggleDropdown = () => setIsDropdownVisible(!isDropdownVisible);
-
-  const handleMusicPress = () => {
-    setIsMusicMenuVisible(true);
-  };
   const [selectedColor, setSelectedColor] = useState('#FFFFFF');
+   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const toggleDropdown = () => setIsDropdownVisible(!isDropdownVisible);
+  const [pipZoomMode, setPipZoomMode] = useState(false);
+  const [editingTextId, setEditingTextId] = useState(null);
 
-  const handleCloseMusicMenu = () => {
-    setIsMusicMenuVisible(false);
-  };
+  
   useEffect(() => {
     if (originalImageUri) {
       setCurrentMedia({ uri: originalImageUri, type: 'photo' });
     }
   }, [originalImageUri]);
-
-  const handleSelectMusic = (music) => {
-    // Handle the selected music (e.g., set it as background music for the video)
-    console.log('Selected music:', music);
-  };
-useEffect(() => {
-  if (draftedMedia) {
-    setCurrentMedia({ uri: draftedMedia.editedImageUri || draftedMedia.uri, type: draftedMedia.type });
-    setIsVideo(draftedMedia.type === 'video');
-    setSelectedFilter(FILTERS[draftedMedia.filterIndex] || null);
-    setSelectedHashtags(draftedMedia.hashtags || []);
-    setSelectedLocation(draftedMedia.location);
-    setSelectedFriends(draftedMedia.friends || []);
-    setPipImage(draftedMedia.pipImage);
-    setTextElements(draftedMedia.textElements || []);
-    setSelectedStickers(draftedMedia.stickers || []);
-    setContrast(draftedMedia.contrast || 1);
-    setBrightness(draftedMedia.brightness || 0);
-    setTemperature(draftedMedia.temperature || 0);
-    setSoftness(draftedMedia.softness || 0);
-    setSharpness(draftedMedia.sharpness || 0);
-    setPipSize(draftedMedia.pipSize || wp('25%'));
-    setPipBackgroundColor(draftedMedia.pipBackgroundColor || 'rgba(0, 0, 0, 0.5)');
-    setPipOpacity(draftedMedia.pipOpacity || 1);
-    setPipRotation(draftedMedia.pipRotation || 0);
-    setIsMuted(draftedMedia.isMuted || false);
-    setPlaybackSpeed(draftedMedia.playbackSpeed || 1);
-  }
-}, [draftedMedia]);
-
-
- const handleBrushPress = () => {
-    navigation.navigate('DrawingScreen', { image: currentMedia.uri });
-  };
-  
-
-  const toggleRecordingMenu = () => {
-    setIsRecordingMenuVisible(!isRecordingMenuVisible);
-  };
-const Priview = async () => {
-  try {
-    const uri = await viewShotRef.capture();
-    setIsPreviewVisible(true);
-    // Pass the captured URI to the PreviewModal
-    setPreviewImage(uri);
-  } catch (error) {
-    console.error('Error capturing preview:', error);
-    Alert.alert('Error', 'Failed to generate preview. Please try again.');
-  }
-};
-
   useEffect(() => {
     fetchStickers();
   }, []);
 
-  
- useEffect(() => {
-  if (currentMedia) {
-    RNFS.exists(currentMedia.uri.replace('file://', ''))
-      .then((exists) => {
-        console.log('File exists:', exists);
-      })
-      .catch((error) => {
-        console.error('Error checking file existence:', error);
-      });
-  }
-}, [currentMedia]);
+  useEffect(() => {
+    if (draftedMedia) {
+      setCurrentMedia({ uri: draftedMedia.editedImageUri || draftedMedia.uri, type: draftedMedia.type });
+      setIsVideo(draftedMedia.type === 'video');
+      setSelectedFilter(FILTERS[draftedMedia.filterIndex] || null);
+      setSelectedHashtags(draftedMedia.hashtags || []);
+      setSelectedLocation(draftedMedia.location);
+      setSelectedFriends(draftedMedia.friends || []);
+      setPipImage(draftedMedia.pipImage);
+      setTextElements(draftedMedia.textElements || []);
+      setSelectedStickers(draftedMedia.stickers || []);
+      setContrast(draftedMedia.contrast || 1);
+      setBrightness(draftedMedia.brightness || 0);
+      setTemperature(draftedMedia.temperature || 0);
+      setSoftness(draftedMedia.softness || 0);
+      setSharpness(draftedMedia.sharpness || 0);
+      setPipSize(draftedMedia.pipSize || wp('25%'));
+      setPipBackgroundColor(draftedMedia.pipBackgroundColor || 'rgba(0, 0, 0, 0.5)');
+      setPipOpacity(draftedMedia.pipOpacity || 1);
+      setPipRotation(draftedMedia.pipRotation || 0);
+      setIsMuted(draftedMedia.isMuted || false);
+      setPlaybackSpeed(draftedMedia.playbackSpeed || 1);
+    }
+  }, [draftedMedia]);
+
+  useEffect(() => {
+      if (media) {
+        setCurrentMedia(media);
+      }
+    }, [media]);
+      useEffect(() => {
+    if (currentMedia) {
+      RNFS.exists(currentMedia.uri.replace('file://', ''))
+        .then((exists) => {
+          console.log('File exists:', exists);
+        })
+        .catch((error) => {
+          console.error('Error checking file existence:', error);
+        });
+    }
+  }, [currentMedia]);
 
   useEffect(() => {
     if (!currentMedia) {
@@ -195,6 +173,7 @@ const Priview = async () => {
       console.log('Received media:', currentMedia);
     }
   }, [currentMedia, navigation]);
+
   useEffect(() => {
   const unsubscribe = navigation.addListener('focus', () => {
     const trimmedVideo = route.params?.trimmedVideo;
@@ -212,8 +191,7 @@ const Priview = async () => {
       setIsVideo(true);
     } else if (newMedia) {
       setCurrentMedia(newMedia);
-      setIsVideo(newMedia.type === 'video');
-    } else if (!currentMedia) {
+setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');    } else if (!currentMedia) {
       console.log('No media received');
       Alert.alert('Error', 'No media provided', [
         { text: 'OK', onPress: () => navigation.goBack() }
@@ -222,58 +200,146 @@ const Priview = async () => {
       console.log('Received media:', currentMedia);
     }
   });
+  
 
   return unsubscribe;
   }, [navigation, route.params]);
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      const trimmedVideo = route.params?.trimmedVideo;
+      const newMedia = route.params?.media;
+      const croppedImage = route.params?.croppedImage;
+      const originalImage = route.params?.originalImage;
+      const editedImage = route.params?.editedImage;
+      const croppedVideo = route.params?.croppedVideo;
+      const originalImageUri = route.params?.originalImageUri; // Add this line
+      const layoutData = route.params?.media?.layoutData;
+    const layoutScreenshot = route.params?.media?.layoutScreenshot;
 
-useEffect(() => {
-  const unsubscribe = navigation.addListener('focus', () => {
-    const trimmedVideo = route.params?.trimmedVideo;
-    const newMedia = route.params?.media;
-    const croppedImage = route.params?.croppedImage;
-    const originalImage = route.params?.originalImage;
-    const editedImage = route.params?.editedImage;
-    const croppedVideo = route.params?.croppedVideo;
-    const originalImageUri = route.params?.originalImageUri; // Add this line
+      if (trimmedVideo) {
+        console.log('Received trimmed video:', trimmedVideo);
+        setCurrentMedia(trimmedVideo);
+        setIsVideo(true);
+      } else if (croppedVideo) {
+        setCurrentMedia(croppedVideo);
+        setIsVideo(true);
+      } else if (editedImage) {
+        setCurrentMedia({ uri: editedImage, type: 'photo' });
+        setIsVideo(false);
+      } else if (croppedImage) {
+        console.log('Received cropped image:', croppedImage);
+        setCurrentMedia(croppedImage);
+        setOriginalImage(originalImage || currentMedia);
+        setIsVideo(false);
+      } else if (newMedia) {
+        setCurrentMedia(newMedia);
+  setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');    } else if (originalImageUri) { // Add this condition
+        setCurrentMedia({ uri: originalImageUri, type: 'photo' });
+        setIsVideo(false);
+      } else if (!currentMedia) {
+        console.log('No media received');
+        Alert.alert('Error', 'No media provided', [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+      } else {
+        console.log('Using existing media:', currentMedia);
+      }
+    });
 
-    if (trimmedVideo) {
-      console.log('Received trimmed video:', trimmedVideo);
-      setCurrentMedia(trimmedVideo);
-      setIsVideo(true);
-    } else if (croppedVideo) {
-      setCurrentMedia(croppedVideo);
-      setIsVideo(true);
-    } else if (editedImage) {
-      setCurrentMedia({ uri: editedImage, type: 'photo' });
-      setIsVideo(false);
-    } else if (croppedImage) {
-      console.log('Received cropped image:', croppedImage);
-      setCurrentMedia(croppedImage);
-      setOriginalImage(originalImage || currentMedia);
-      setIsVideo(false);
-    } else if (newMedia) {
-      setCurrentMedia(newMedia);
-      setIsVideo(newMedia.type === 'video');
-    } else if (originalImageUri) { // Add this condition
-      setCurrentMedia({ uri: originalImageUri, type: 'photo' });
-      setIsVideo(false);
-    } else if (!currentMedia) {
+    return unsubscribe;
+  }, [navigation, route.params, currentMedia]);
+  useEffect(() => {
+    if (media) {
+      setCurrentMedia(media);
+      setIsFromLayout(media.isFromLayout || false);
+    } else if (selectedLayoutImages.length > 0) {
+      // If no media but we have layout images, use the first one
+      const firstImage = selectedLayoutImages[0];
+      setCurrentMedia({
+        uri: firstImage.image,
+        type: 'photo',
+        isFromLayout: true
+      });
+      setIsFromLayout(true);
+    } else {
       console.log('No media received');
       Alert.alert('Error', 'No media provided', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
-    } else {
-      console.log('Using existing media:', currentMedia);
     }
-  });
+  }, [media, selectedLayoutImages]);
+const handleBrushPress = async () => {
+    let imageUri;
+    
+    if (isFromLayout) {
+      // Capture the layout view
+      imageUri = await viewShotRef.current.capture();
+    } else if (isVideo) {
+      // Generate a thumbnail for video
+      try {
+        const { path } = await createThumbnail({
+          url: currentMedia.uri,
+          timeStamp: 1000,
+        });
+        imageUri = path;
+      } catch (err) {
+        console.error("Error creating video thumbnail:", err);
+        Alert.alert("Error", "Failed to create video thumbnail");
+        return;
+      }
+    } else {
+      // For regular images
+      imageUri = currentMedia.uri;
+    }
 
-  return unsubscribe;
-}, [navigation, route.params, currentMedia]);
-
+    if (imageUri) {
+      navigation.navigate('DrawingScreen', { 
+        image: imageUri,
+        mediaType: isFromLayout ? 'layout' : isVideo ? 'video' : 'image',
+        originalMedia: currentMedia,
+        layoutData: isFromLayout ? layoutData : null,
+        selectedLayoutId: isFromLayout ? selectedLayoutId : null
+      });
+    } else {
+      Alert.alert('Error', 'Unable to process this media type for drawing.');
+    }
+  };
+  const toggleRecordingMenu = () => {
+    setIsRecordingMenuVisible(!isRecordingMenuVisible);
+  };
+  const Priview = async () => {
+    try {
+      const uri = await viewShotRef.capture();
+      setIsPreviewVisible(true);
+      // Pass the captured URI to the PreviewModal
+      setPreviewImage(uri);
+    } catch (error) {
+      console.error('Error capturing preview:', error);
+      Alert.alert('Error', 'Failed to generate preview. Please try again.');
+    }
+  };
+  const handleSelectMusic = (music) => {
+    // Handle the selected music (e.g., set it as background music for the video)
+    console.log('Selected music:', music);
+  };
+  const getSelectedImage = (layoutId, tabId) => {
+  const selectedImage = selectedLayoutImages.find(
+    image => image.layoutId === layoutId && image.tabId === tabId
+  );
+  return selectedImage ? selectedImage.image : null;
+  };
+  const toggleTextDropdown = () => {
+    setIsTextDropdownVisible(!isTextDropdownVisible);
+  };
+  const handleMusicPress = () => {
+    setIsMusicMenuVisible(true);
+  };
+  const handleCloseMusicMenu = () => {
+    setIsMusicMenuVisible(false);
+  };
   const handleBackPress = () => {
     navigation.goBack();
   };
-
   const handleSelectSticker = (sticker) => {
     const newSticker = {
       ...sticker,
@@ -302,66 +368,64 @@ useEffect(() => {
       setIsLoadingStickers(false);
     }
   };
-const TextDropdown = ({ onTextStyle, onColorSelect }) => {
-  const textOptions = [
-    { icon: 'add', text: 'Add Text', iconSet: 'Ionicons', onPress: () => onTextStyle('add') },
-    { icon: 'underline', text: 'Underline', iconSet: 'FontAwesome', onPress: () => onTextStyle('underline') },
-    { icon: 'bold', text: 'Bold', iconSet: 'FontAwesome', onPress: () => onTextStyle('bold') },
-    { icon: 'arrow-up', text: 'Uppercase', iconSet: 'FontAwesome', onPress: () => onTextStyle('uppercase') },
-    { icon: 'arrow-down', text: 'Lowercase', iconSet: 'FontAwesome', onPress: () => onTextStyle('lowercase') },
-    { icon: 'color-palette', text: 'Color', iconSet: 'Ionicons', onPress: onColorSelect },
-  ];
+  const TextDropdown = ({ onTextStyle, onColorSelect }) => {
+    const textOptions = [
+      { icon: 'add', text: 'Add Text', iconSet: 'Ionicons', onPress: () => onTextStyle('add') },
+      { icon: 'underline', text: 'Underline', iconSet: 'FontAwesome', onPress: () => onTextStyle('underline') },
+      { icon: 'bold', text: 'Bold', iconSet: 'FontAwesome', onPress: () => onTextStyle('bold') },
+      { icon: 'arrow-up', text: 'Uppercase', iconSet: 'FontAwesome', onPress: () => onTextStyle('uppercase') },
+      { icon: 'arrow-down', text: 'Lowercase', iconSet: 'FontAwesome', onPress: () => onTextStyle('lowercase') },
+      { icon: 'color-palette', text: 'Color', iconSet: 'Ionicons', onPress: onColorSelect },
+    ];
 
-  return (
-    <View style={styles.textDropdown}>
-      {textOptions.map((option, index) => (
-        <TouchableOpacity key={index} style={styles.textDropdownItem} onPress={option.onPress}>
-          {option.iconSet === 'Ionicons' ? (
-            <Icon name={option.icon} size={16} color="#fff" />
-          ) : (
-            <Icon1 name={option.icon} size={16} color="#fff" />
-          )}
-          <Text style={styles.textDropdownItemText}>{option.text}</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-};
-    const handleSpeedChange = () => {
+    return (
+      <View style={styles.textDropdown}>
+        {textOptions.map((option, index) => (
+          <TouchableOpacity key={index} style={styles.textDropdownItem} onPress={option.onPress}>
+            {option.iconSet === 'Ionicons' ? (
+              <Icon name={option.icon} size={16} color="#fff" />
+            ) : (
+              <Icon1 name={option.icon} size={16} color="#fff" />
+            )}
+            <Text style={styles.textDropdownItemText}>{option.text}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  };
+  const handleSpeedChange = () => {
     const speeds = [0.5, 1, 1.5, 2];
     const currentIndex = speeds.indexOf(playbackSpeed);
     const nextIndex = (currentIndex + 1) % speeds.length;
     const newSpeed = speeds[nextIndex];
     setPlaybackSpeed(newSpeed);
   };
+  const saveMedia = async (isDraft = false) => {
+    try {
+      if (!currentMedia) {
+        throw new Error('No media to save');
+      }
 
-const saveMedia = async (isDraft = false) => {
-  try {
-    if (!currentMedia) {
-      throw new Error('No media to save');
+      // Capture the entire view
+      const uri = await viewShotRef.capture();
+
+      const album = isDraft ? 'Drafts' : 'Camera';
+      const saveResult = await CameraRoll.save(uri, { 
+        type: isVideo ? 'video' : 'photo', 
+        album: album 
+      });
+
+      console.log('Media saved successfully:', saveResult);
+      Alert.alert('Success', `Media ${isDraft ? 'drafted' : 'saved'} successfully`);
+    } catch (error) {
+      console.error('Error saving media:', error);
+      if (error.message.includes('permission')) {
+        Alert.alert('Permission Error', 'Storage permission is required to save media. Please grant permission in your device settings.');
+      } else {
+        Alert.alert('Error', `Failed to ${isDraft ? 'draft' : 'save'} media. Please try again.`);
+      }
     }
-
-    // Capture the entire view
-    const uri = await viewShotRef.capture();
-
-    const album = isDraft ? 'Drafts' : 'Camera';
-    const saveResult = await CameraRoll.save(uri, { 
-      type: isVideo ? 'video' : 'photo', 
-      album: album 
-    });
-
-    console.log('Media saved successfully:', saveResult);
-    Alert.alert('Success', `Media ${isDraft ? 'drafted' : 'saved'} successfully`);
-  } catch (error) {
-    console.error('Error saving media:', error);
-    if (error.message.includes('permission')) {
-      Alert.alert('Permission Error', 'Storage permission is required to save media. Please grant permission in your device settings.');
-    } else {
-      Alert.alert('Error', `Failed to ${isDraft ? 'draft' : 'save'} media. Please try again.`);
-    }
-  }
-};
-
+  };
   const handleStickerPress = () => {
     setIsStickerBarVisible(!isStickerBarVisible);
   };
@@ -377,7 +441,6 @@ const saveMedia = async (isDraft = false) => {
     ]);
     setIsHashtagMenuVisible(false);
   };
-
   const handleSelectLocation = (location) => {
     setSelectedLocation({
       ...location,
@@ -387,7 +450,6 @@ const saveMedia = async (isDraft = false) => {
     });
     setIsLocationMenuVisible(false);
   };
-
   const handleAddFriend = (friend) => {
     setSelectedFriends(prevFriends => [
       ...prevFriends,
@@ -438,131 +500,156 @@ const saveMedia = async (isDraft = false) => {
     console.error('Error saving draft:', error);
     Alert.alert('Error', 'Failed to save draft. Please try again.');
   }
-};
-
-const handleTextStyle = (style, value) => {
-  if (style === 'add') {
-    const newText = {
-      id: Date.now(),
-      content: 'New Text',
-      pan: new Animated.ValueXY(),
-      scale: new Animated.Value(1),
-      rotate: new Animated.Value(0),
-      style: {
-        textDecorationLine: 'none',
-        fontWeight: 'normal',
-        color: 'white',
-      },
-    };
-    setTextElements(prevElements => [...prevElements, newText]);
-    setSelectedTextId(newText.id);
-  } else {
-    setTextElements(prevElements => prevElements.map(text => {
-      if (text.id === selectedTextId) {
-        switch (style) {
-          case 'underline':
-            return {
-              ...text,
-              style: {
-                ...text.style,
-                textDecorationLine: text.style.textDecorationLine === 'underline' ? 'none' : 'underline'
-              }
-            };
-          case 'bold':
-            return {
-              ...text,
-              style: {
-                ...text.style,
-                fontWeight: text.style.fontWeight === 'bold' ? 'normal' : 'bold'
-              }
-            };
-          case 'uppercase':
-            return { ...text, content: text.content.toUpperCase() };
-          case 'lowercase':
-            return { ...text, content: text.content.toLowerCase() };
-          case 'color':
-            return {
-              ...text,
-              style: {
-                ...text.style,
-                color: value
-              }
-            };
-          default:
-            return text;
+  };
+  const handleTextStyle = (style, value) => {
+    if (style === 'add') {
+      const newText = {
+        id: Date.now(),
+        content: 'New Text',
+        pan: new Animated.ValueXY(),
+        scale: new Animated.Value(1),
+        rotate: new Animated.Value(0),
+        style: {
+          textDecorationLine: 'none',
+          fontWeight: 'normal',
+          color: 'white',
+        },
+      };
+      setTextElements(prevElements => [...prevElements, newText]);
+      setSelectedTextId(newText.id);
+    } else {
+      setTextElements(prevElements => prevElements.map(text => {
+        if (text.id === selectedTextId) {
+          switch (style) {
+            case 'underline':
+              return {
+                ...text,
+                style: {
+                  ...text.style,
+                  textDecorationLine: text.style.textDecorationLine === 'underline' ? 'none' : 'underline'
+                }
+              };
+            case 'bold':
+              return {
+                ...text,
+                style: {
+                  ...text.style,
+                  fontWeight: text.style.fontWeight === 'bold' ? 'normal' : 'bold'
+                }
+              };
+            case 'uppercase':
+              return { ...text, content: text.content.toUpperCase() };
+            case 'lowercase':
+              return { ...text, content: text.content.toLowerCase() };
+            case 'color':
+              return {
+                ...text,
+                style: {
+                  ...text.style,
+                  color: value
+                }
+              };
+            default:
+              return text;
+          }
         }
-      }
-      return text;
-    }));
-  }
-   if (style === 'color') {
-    setSelectedColor(value);
-  }
-  setIsTextDropdownVisible(false);
-};
+        return text;
+      }));
+    }
+    if (style === 'color') {
+      setSelectedColor(value);
+    }
+    setIsTextDropdownVisible(false);
+  };
+  const createPanResponder = (item, itemType) => {
+    let lastScale = 1;
+    let lastRotation = 0;
+    let lastDistance = 0;
 
-const handleBackgroundPress = () => {
-  setIsPipSelected(false);
-};
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        setIsMoving(true);
+        setMovingItem({ ...item, type: itemType });
 
-const createPanResponder = (item, itemType) => {
-  let lastScale = 1;
-  let lastRotation = 0;
-  let lastDistance = 0;
-  let initialAngle = 0;
+        item.pan.setOffset({
+          x: item.pan.x._value,
+          y: item.pan.y._value
+        });
+        item.pan.setValue({ x: 0, y: 0 });
+      },
+      onPanResponderMove: (event, gestureState) => {
+        const { touches } = event.nativeEvent;
 
-  return PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: (e, gestureState) => {
-      setIsMoving(true);
-      setMovingItem({ ...item, type: itemType });
+        if (touches.length === 1) {
+          if (itemType === 'pip' && pipZoomMode) {
+            // Diagonal drag for zooming
+            const dx = gestureState.dx;
+            const dy = gestureState.dy;
+            const dragDistance = Math.sqrt(dx * dx + dy * dy);
+            const zoomFactor = 1 + dragDistance / 200; // Adjust this value to control zoom sensitivity
+            item.scale.setValue(lastScale * zoomFactor);
+          } else {
+            Animated.event(
+              [null, { dx: item.pan.x, dy: item.pan.y }],
+              { useNativeDriver: false }
+            )(event, gestureState);
+          }
+        } else if (touches.length === 2) {
+          const touch1 = touches[0];
+          const touch2 = touches[1];
 
-      item.pan.setOffset({
-        x: item.pan.x._value,
-        y: item.pan.y._value
-      });
-      item.pan.setValue({ x: 0, y: 0 });
+          const distance = Math.sqrt(
+            Math.pow(touch2.pageX - touch1.pageX, 2) +
+            Math.pow(touch2.pageY - touch1.pageY, 2)
+          );
 
-      // Store initial angle for rotation
-      initialAngle = Math.atan2(gestureState.dy, gestureState.dx);
-    },
-    onPanResponderMove: (e, gestureState) => {
-      const { moveX, moveY, dx, dy } = gestureState;
+          if (lastDistance === 0) {
+            lastDistance = distance;
+            return;
+          }
 
-      if (itemType === 'pip' && e.nativeEvent.locationX > item.size - 30 && e.nativeEvent.locationY > item.size - 30) {
-        // Resizing and rotating
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const angle = Math.atan2(dy, dx) - initialAngle;
-        
-        const scale = 1 + distance / 200; // Adjust this value to control resize sensitivity
-        item.scale.setValue(lastScale * scale);
-        
-        item.rotate.setValue(lastRotation + angle * (180 / Math.PI));
-      } else {
-        // Moving
-        Animated.event(
-          [null, { dx: item.pan.x, dy: item.pan.y }],
-          { useNativeDriver: false }
-        )(e, gestureState);
-      }
-    },
-    onPanResponderRelease: (e, gestureState) => {
-      setIsMoving(false);
-      setMovingItem(null);
+          const scale = distance / lastDistance;
+          const newScale = lastScale * scale;
 
-      item.pan.flattenOffset();
-      lastScale = item.scale._value;
-      lastRotation = item.rotate._value;
+          if (newScale > 0.5 && newScale < 3) {
+            item.scale.setValue(newScale);
+            lastScale = newScale;
+          }
 
-      const shouldDelete = item.pan.x._value > wp('75%') && item.pan.y._value < hp('20%');
-      if (shouldDelete) {
-        handleDelete(itemType, item.id);
-      }
-    },
-  });
-};
+          const angle = Math.atan2(touch2.pageY - touch1.pageY, touch2.pageX - touch1.pageX);
+          const rotation = angle - lastRotation;
+          item.rotate.setValue(item.rotate._value + rotation);
 
+          lastRotation = angle;
+          lastDistance = distance;
+        }
+      },
+      onPanResponderRelease: () => {
+        setIsMoving(false);
+        setMovingItem(null);
+
+        const shouldDelete = item.pan.x._value > wp('75%') && item.pan.y._value < hp('20%');
+        if (shouldDelete) {
+          console.log(`Item released in delete zone. Type: ${itemType}, ID: ${item.id}`);
+          handleDelete(itemType, item.id);
+        } else {
+          item.pan.flattenOffset();
+        }
+        lastDistance = 0;
+        lastRotation = 0;
+        lastScale = item.scale._value;
+      },
+      onPanResponderTerminationRequest: () => true,
+      onShouldBlockNativeResponder: () => false,
+      hitSlop: { top: 20, bottom: 20, left: 20, right: 20 },
+    });
+  };
+  const handlePipZoomPress = () => {
+  // Toggle zoom mode
+  setPipZoomMode(!pipZoomMode);
+  };
   const handlePIPPress = async () => {
     try {
       const result = await CameraRoll.getPhotos({
@@ -574,13 +661,12 @@ const createPanResponder = (item, itemType) => {
       navigation.navigate('GalleryPicker', {
         photos: result.edges,
         onSelectImage: (selectedImage) => {
-        setPipImage({
-  uri: selectedImage.node.image.uri,
-  pan: new Animated.ValueXY(),
-  scale: new Animated.Value(1),
-  rotate: new Animated.Value(0),
-  size: pipSize,
-});
+          setPipImage({
+            uri: selectedImage.node.image.uri,
+            pan: new Animated.ValueXY(),
+            scale: new Animated.Value(1),
+            rotate: new Animated.Value(0)
+          });
         }
       });
     } catch (error) {
@@ -605,41 +691,37 @@ const createPanResponder = (item, itemType) => {
   const handleSoftnessChange = (value) => {
   setSoftness(value);
   };
-
   const handleSharpnessChange = (value) => {
     setSharpness(value);
   };
-const PreviewModal = ({ isVisible, onClose, imageUri }) => {
-  return (
-    <Modal
-      visible={isVisible}
-      transparent={true}
-      animationType="fade"
-    >
-      <View style={styles.previewModalContainer}>
-        <View style={styles.previewImageContainer}>
-          <Image source={{ uri: imageUri }} style={styles.previewImage} resizeMode="contain" />
+  const PreviewModal = ({ isVisible, onClose, imageUri }) => {
+    return (
+      <Modal
+        visible={isVisible}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.previewModalContainer}>
+          <View style={styles.previewImageContainer}>
+            <Image source={{ uri: imageUri }} style={styles.previewImage} resizeMode="contain" />
+          </View>
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <Icon name="close" size={24} color="#fff" />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <Icon name="close" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
-    </Modal>
-  );
-};
+      </Modal>
+    );
+  };
   const getBrightnessOverlay = (brightness) => {
   const alpha = brightness > 0 ? brightness : -brightness;
   const color = brightness > 0 ? 255 : 0;
   return `rgba(${color}, ${color}, ${color}, ${alpha})`;
   };
-const getTemperatureOverlay = (temperature) => {
-  const warmth = temperature > 0 ? temperature : 0;
-  const coolness = temperature < 0 ? -temperature : 0;
-  return `linear-gradient(
-    rgba(255, ${255 - warmth * 50}, ${255 - warmth * 100}, ${Math.abs(temperature) * 0.3}),
-    rgba(${255 - coolness * 100}, ${255 - coolness * 50}, 255, ${Math.abs(temperature) * 0.3})
-  )`;
-};
+  const getTemperatureOverlay = (temperature) => {
+    const r = temperature > 0 ? 255 : 255 + temperature * 255;
+    const b = temperature < 0 ? 255 : 255 - temperature * 255;
+    return `rgba(${r}, 255, ${b}, ${Math.abs(temperature) * 0.5})`;
+  };
   const getSoftnessOverlay = (softness) => {
     return { filter: `blur(${softness * 5}px)` };
   };
@@ -670,38 +752,37 @@ const getTemperatureOverlay = (temperature) => {
     default:
       console.warn(`Unknown item type: ${type}`);
   }
-};
-const handleEditText = (id, newContent) => {
-  setTextElements(prevElements =>
-    prevElements.map(element =>
-      element.id === id ? { ...element, content: newContent } : element
-    )
-  );
-};
-const getContrastFilter = (contrast) => {
-  return `rgba(128, 128, 128, ${Math.abs(contrast - 1)})`;
-};
-const handleColorSelect = () => {
-  setIsColorPickerVisible(true);
-  setIsTextDropdownVisible(false);
-};
-
-const handleColorChange = (color) => {
-  if (selectedTextId) {
+  };
+  const handleEditText = (id, newContent) => {
     setTextElements(prevElements =>
-      prevElements.map(text =>
-        text.id === selectedTextId
-          ? { ...text, style: { ...text.style, color } }
-          : text
+      prevElements.map(element =>
+        element.id === id ? { ...element, content: newContent } : element
       )
     );
-  }
-};
+    setEditingTextId(id);
+  };
+  const getContrastFilter = (contrast) => {
+    return `rgba(128, 128, 128, ${Math.abs(contrast - 1)})`;
+  };
+  const handleColorSelect = () => {
+    setIsColorPickerVisible(true);
+    setIsTextDropdownVisible(false);
+  };
+  const handleColorChange = (color) => {
+    if (selectedTextId) {
+      setTextElements(prevElements =>
+        prevElements.map(text =>
+          text.id === selectedTextId
+            ? { ...text, style: { ...text.style, color } }
+            : text
+        )
+      );
+    }
+  };
 return (
   <SafeAreaView style={styles.container}>
    
     <TopBar
-    
       currentMedia={currentMedia}
       onPIPPress={handlePIPPress}
       onSelectFilter={handleSelectFilter}
@@ -719,8 +800,7 @@ return (
       onSoftnessChange={handleSoftnessChange}
       sharpnessValue={sharpness}
       onSharpnessChange={handleSharpnessChange}
-     
-  onTextStyle={handleTextStyle}
+     onTextStyle={handleTextStyle}
     />
     <View style={styles.topBar}>
         <TouchableOpacity onPress={handleBackPress}>
@@ -776,61 +856,76 @@ return (
   options={{ format: "jpg", quality: 1 }}
   style={styles.viewShot}
 >
-<TouchableWithoutFeedback onPress={handleBackgroundPress}>
     <View style={styles.mediaContainer} pointerEvents="box-none">
       
- {currentMedia && (
-  <View style={styles.mediaWrapper}>
-    {isVideo ? (
-            <View style={[styles.videoContainer, getSoftnessOverlay(softness), getSharpnessOverlay(sharpness)]}>
-
-      <Video
-        ref={videoRef}
-        source={{ uri: currentMedia.uri }}
-        style={[styles.media, { opacity: contrast }]}
-        resizeMode="contain"
-        repeat={currentMedia.type === 'boomerang'}
-        controls={currentMedia.type !== 'boomerang'}
-        rate={playbackSpeed} // Add this line to control playback speed
-
-      />
-      </View>
-    ) : (
-            <View style={[styles.imageContainer, getSoftnessOverlay(softness), getSharpnessOverlay(sharpness)]}>
-        {SelectedFilterComponent ? (
-          <SelectedFilterComponent
-            image={
-              <Image
-                source={{ uri: currentMedia.uri }}
-                style={[styles.media, { opacity: contrast }]}
-                resizeMode="contain"
+            {currentMedia && (
+          <View style={styles.mediaWrapper}>
+            {isFromLayout ? (
+              <LayoutView
+                layoutData={layoutData}
+                selectedLayoutId={selectedLayoutId}
+                getSelectedImage={(layoutId, tabId) => {
+                  const layout = layoutData.find(item => item.id === layoutId);
+                  if (layout) {
+                    const image = layout.images.find(img => img.id === tabId);
+                    return image ? image.image : null;
+                  }
+                  return null;
+                }}
               />
-            }
-          />
-        ) : (
-          <Image
-            source={{ uri: currentMedia.uri }}
-            style={[styles.media, { opacity: contrast }]}
-            resizeMode="contain"
-          />
+            ) : isVideo ? (
+              <View style={[styles.videoContainer, getSoftnessOverlay(softness), getSharpnessOverlay(sharpness)]}>
+                <View style={[
+                  styles.temperatureOverlay,
+                  { backgroundColor: getTemperatureOverlay(temperature) }
+                ]} />
+                <View style={[
+                  styles.brightnessOverlay,
+                  { backgroundColor: getBrightnessOverlay(brightness) }
+                ]} />
+                <Video
+                  ref={videoRef}
+                  source={{ uri: currentMedia.uri }}
+                  style={[styles.media, { opacity: contrast }]}
+                  resizeMode="contain"
+                  repeat={currentMedia.type === 'boomerang'}
+                  controls={currentMedia.type !== 'boomerang'}
+                  rate={playbackSpeed}
+                />
+              </View>
+            ) : (
+              <View style={[styles.imageContainer, getSoftnessOverlay(softness), getSharpnessOverlay(sharpness), { filter: getContrastFilter(contrast) }]}>
+                {SelectedFilterComponent ? (
+                  <SelectedFilterComponent
+                    image={
+                      <Image
+                        source={{ uri: currentMedia.uri, cache: 'force-cache' }}
+                        style={[styles.media]}
+                        resizeMode="contain"
+                      />
+                    }
+                  />
+                ) : (
+                  <Image
+                    source={{ uri: currentMedia.uri, cache: 'force-cache' }}
+                    style={[styles.media]}
+                    resizeMode="contain"
+                  />
+                )}
+              </View>
+            )}
+          </View>
         )}
-      </View>
-    )}
-    
-    <View style={[
-  styles.temperatureOverlay,
-  { backgroundColor: getTemperatureOverlay(temperature) }
-]} />
+        <View style={[styles.contrastOverlay, { opacity: contrast - 1 }]} />
+        <View style={[
+          styles.temperatureOverlay,
+          { backgroundColor: getTemperatureOverlay(temperature) }
+        ]} />
+        <View style={[
+          styles.brightnessOverlay,
+          { backgroundColor: getBrightnessOverlay(brightness) }
+        ]} />   
 
-    <View style={[
-      styles.brightnessOverlay,
-      { backgroundColor: getBrightnessOverlay(brightness) }
-    ]} />
-    
-  </View>
-  
-)}
-      <View style={[styles.contrastOverlay, { opacity: contrast - 1, brightness: brightness + 1 }]} />
       {selectedFriends.map((friend) => {
         const panResponder = createPanResponder(friend, 'friend');
         return (
@@ -903,90 +998,83 @@ return (
           <Text style={styles.overlayText}>{selectedLocation.placeName}</Text>
         </Animated.View>
       )}
-      {pipImage && (
+     
+     {pipImage && (
+  <Animated.View
+    style={[
+      styles.pipContainer,
+      {
+        transform: [
+          { translateX: pipImage.pan.x },
+          { translateY: pipImage.pan.y },
+          { scale: pipImage.scale },
+          { rotate: `${pipRotation}deg` },
+        ],
+        backgroundColor: pipBackgroundColor,
+        width: pipSize,
+        height: pipSize,
+      }
+    ]}
+    {...createPanResponder(pipImage, 'pip').panHandlers}
+  >
+    <Animated.Image
+      source={{ uri: pipImage.uri }}
+      style={[
+        styles.pipImage,
+        { opacity: pipOpacity },
+        pipFlipped && { transform: [{ scaleX: -1 }] }
+      ]}
+    />
+    <TouchableOpacity style={[styles.pipIcon, styles.pipDeleteIcon]} onPress={() => setPipImage(null)}>
+      <Icon name="close" size={20} color="white" />
+    </TouchableOpacity>
+    <TouchableOpacity style={[styles.pipIcon, styles.pipFlipIcon]} onPress={() => setPipFlipped(!pipFlipped)}>
+      <Icon2 name="flip-horizontal" size={20} color="white" />
+    </TouchableOpacity>
+    <TouchableOpacity style={[styles.pipIcon, styles.pipMenuIcon]} onPress={handlePipMenuPress}>
+      <Icon name="pencil" size={20} color="white" />
+    </TouchableOpacity>
+    <TouchableOpacity style={[styles.pipIcon, styles.pipZoomIcon]} onPress={handlePipZoomPress}>
+      <Icon2 name="arrow-expand" size={20} color="white" />
+    </TouchableOpacity>
+  </Animated.View>
+)}
+    {textElements.map((text) => {
+      const panResponder = createPanResponder(text, 'text');
+      const isEditing = editingTextId === text.id;
+      return (
         <Animated.View
+          key={text.id}
           style={[
-            styles.pipContainer,
+            styles.overlay,
+            isEditing && styles.editingOverlay,
             {
               transform: [
-                { translateX: pipImage.pan.x },
-                { translateY: pipImage.pan.y },
-                { scale: pipImage.scale },
-                { rotate: pipImage.rotate.interpolate({
+                { translateX: text.pan.x },
+                { translateY: text.pan.y },
+                { scale: text.scale },
+                { rotate: text.rotate.interpolate({
                   inputRange: [0, 360],
                   outputRange: ['0deg', '360deg']
                 })},
-              ],
-              backgroundColor: pipBackgroundColor,
-              width: pipBackgroundSize * (pipBackgroundSize / 100), // Adjust container size
-              height: pipBackgroundSize * (pipBackgroundSize / 100), // Adjust container size
-              opacity: pipOpacity,
-              borderWidth: isPipSelected ? 2 : 0,
-              borderColor: isPipSelected ? 'white' : 'transparent',
+              ]
             }
           ]}
-          {...createPanResponder(pipImage, 'pip').panHandlers}
+          {...panResponder.panHandlers}
         >
-          <TouchableWithoutFeedback onPress={() => setIsPipSelected(true)}>
-            <Animated.Image
-              source={{ uri: pipImage.uri }}
-              style={[
-                styles.pipImage,
-                { opacity: pipOpacity,width: pipSize,
-          height: pipSize, },
-                pipFlipped && { transform: [{ scaleX: -1 }] }
-              ]}
-            />
-          </TouchableWithoutFeedback>
-          {isPipSelected && (
-            <>
-              <TouchableOpacity style={[styles.pipIcon, styles.pipDeleteIcon]} onPress={() => setPipImage(null)}>
-                <Icon name="close" size={20} color="white" />
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.pipIcon, styles.pipMenuIcon]} onPress={handlePipMenuPress}>
-                <Icon name="pencil" size={20} color="white" />
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.pipIcon, styles.pipFlipIcon]} onPress={() => setPipFlipped(!pipFlipped)}>
-                <Icon3 name="flip" size={20} color="white" />
-              </TouchableOpacity>
-              
-              <View style={[styles.pipIcon, styles.pipResizeRotateIcon]}>
-                <Icon name="resize" size={20} color="white" />
-              </View>
-            </>
-          )}
+          <TextInput
+            style={[styles.overlayText, text.style]}
+            value={text.content}
+            onChangeText={(newContent) => handleEditText(text.id, newContent)}
+            onFocus={() => {
+              setSelectedTextId(text.id);
+              setEditingTextId(text.id);
+            }}
+            onBlur={() => setEditingTextId(null)}
+          />
         </Animated.View>
-      )}
-      {textElements.map((text) => {
-        const panResponder = createPanResponder(text, 'text');
-        return (
-          <Animated.View
-            key={text.id}
-            style={[
-              styles.overlay,
-              {
-                transform: [
-                  { translateX: text.pan.x },
-                  { translateY: text.pan.y },
-                  { scale: text.scale },
-                  { rotate: text.rotate.interpolate({
-                    inputRange: [0, 360],
-                    outputRange: ['0deg', '360deg']
-                  })},
-                ]
-              }
-            ]}
-            {...panResponder.panHandlers}
-          >
-            <TextInput
-              style={[styles.overlayText, text.style]}
-              value={text.content}
-              onChangeText={(newContent) => handleEditText(text.id, newContent)}
-              onFocus={() => setSelectedTextId(text.id)}
-            />
-          </Animated.View>
-        );
-       })}
+      );
+    })}
       {selectedStickers.map((sticker) => {
         const panResponder = createPanResponder(sticker, 'sticker');
         return (
@@ -1016,9 +1104,9 @@ return (
           </Animated.View>
         );
       })}
+   
     </View>
-    </TouchableWithoutFeedback>
-  </ViewShot>
+ </ViewShot>
     <Modal
       visible={isFriendsListVisible}
       transparent={true}
@@ -1053,44 +1141,45 @@ return (
     >
       <View style={styles.pipMenuContainer}>
         <PipMenu
+          pipSize={pipSize}
+          setPipSize={setPipSize}
           pipBackgroundColor={pipBackgroundColor}
           setPipBackgroundColor={setPipBackgroundColor}
           pipOpacity={pipOpacity}
           setPipOpacity={setPipOpacity}
           pipRotation={pipRotation}
           setPipRotation={setPipRotation}
-          pipBackgroundSize={pipBackgroundSize}
-          setPipBackgroundSize={setPipBackgroundSize}
           onClose={handleClosePipMenu}
+          currentMedia={currentMedia}
         />
       </View>
     </Modal>
     <Modal
-        visible={isStickersVisible}
+      visible={isStickersVisible}
+      transparent={true}
+      animationType="slide"
+    >
+      <View style={styles.modalContainer}>
+        <StickerScreen
+          onSelectSticker={handleSelectSticker}
+          onClose={() => setIsStickersVisible(false)}
+          currentMedia={currentMedia}
+        />
+      </View>
+    </Modal>
+    <Modal
+        visible={isMusicMenuVisible}
         transparent={true}
         animationType="slide"
       >
         <View style={styles.modalContainer}>
-          <StickerScreen
-            onSelectSticker={handleSelectSticker}
-            onClose={() => setIsStickersVisible(false)}
-            currentMedia={currentMedia}
-          />
+         <MusicMenu
+  isVisible={isMusicMenuVisible}
+  onClose={handleCloseMusicMenu}
+  onSelectMusic={handleSelectMusic}
+/>
         </View>
     </Modal>
-<Modal
-  visible={isMusicMenuVisible}
-  transparent={true}
-  animationType="slide"
->
-  <View style={styles.musicMenuModalContainer}>
-    <MusicMenu
-      isVisible={isMusicMenuVisible}
-      onClose={handleCloseMusicMenu}
-      onSelectMusic={handleSelectMusic}
-    />
-  </View>
-</Modal>
     
     {isStickerBarVisible && (
       <View style={styles.stickerBar}>
@@ -1122,6 +1211,7 @@ return (
         )}
       </View>
     )}
+ 
     {isDropdownVisible && (
         <View style={styles.dropdown}>
           <TouchableOpacity style={styles.dropdownItem} onPress={handleSave}>
@@ -1132,27 +1222,28 @@ return (
           </TouchableOpacity>
         </View>
       )}
-    <Modal visible={isColorPickerVisible} transparent={true}>
-      <View style={styles.colorPickerContainer}>
-        <ColorPicker
-          onColorChange={handleColorChange}
-          style={{flex: 1}}
-          color={selectedColor}
-        />
-        <TouchableOpacity 
-          style={styles.colorPickerDoneButton} 
-          onPress={() => setIsColorPickerVisible(false)}
-        >
-          <Text style={styles.colorPickerDoneButtonText}>Done</Text>
-        </TouchableOpacity>
-      </View>
-    </Modal>
-      {isTextDropdownVisible && (
-      <TextDropdown 
-        onTextStyle={handleTextStyle}
-        onColorSelect={handleColorSelect}
-      />
-    )}
+<Modal visible={isColorPickerVisible} transparent={true}>
+  <View style={styles.colorPickerContainer}>
+    <ColorPicker
+      onColorChange={handleColorChange}
+      style={{flex: 1}}
+      color={selectedColor}
+    />
+    <TouchableOpacity 
+      style={styles.colorPickerDoneButton} 
+      onPress={() => setIsColorPickerVisible(false)}
+    >
+      <Text style={styles.colorPickerDoneButtonText}>Done</Text>
+    </TouchableOpacity>
+  </View>
+</Modal>
+    
+  {isTextDropdownVisible && (
+  <TextDropdown 
+    onTextStyle={handleTextStyle}
+    onColorSelect={handleColorSelect}
+  />
+)}
       {isRecordingMenuVisible && (
         <RecordingMenu onClose={toggleRecordingMenu} />
       )}
@@ -1165,7 +1256,6 @@ return (
   </SafeAreaView>
 );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1190,12 +1280,14 @@ const styles = StyleSheet.create({
     height: hp('93%'),
     zIndex:2
   },
-   overlay: {
+ overlay: {
     position: 'absolute',
     zIndex: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     padding: 5,
     borderRadius: 5,
+  },
+  editingOverlay: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   overlayText: {
     color: 'white',
@@ -1203,11 +1295,6 @@ const styles = StyleSheet.create({
     minWidth: 100,
     zIndex:2
   },
-  musicMenuModalContainer: {
-  flex: 1,
-  justifyContent: 'flex-end',
-  backgroundColor: 'rgba(0, 0, 0, 0.4)', // semi-transparent background
-},
   modalContainer: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -1217,10 +1304,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderWidth: 2,
     borderColor: 'white',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-  alignItems: 'center',
    
+    padding: 10,
     zIndex: 2,
   },
    viewShot: {
@@ -1229,7 +1314,8 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   pipImage: {
- 
+    width: '100%',
+    height: '100%',
     resizeMode: 'contain',
   },
   pipIcon: {
@@ -1246,13 +1332,17 @@ const styles = StyleSheet.create({
     left: -15,
   },
   pipFlipIcon: {
+    top: -15,
+    right: -15,
+  },
+  pipMenuIcon: {
     bottom: -15,
     left: -15,
   },
-  pipMenuIcon: {
- top : -15,
-    right: -15,
-  },
+  pipZoomIcon: {
+  bottom: -15,
+  right: -15,
+},
   pipMenuContainer: {
     position: 'absolute',
     bottom: 0,
@@ -1270,7 +1360,6 @@ const styles = StyleSheet.create({
   temperatureOverlay: {
   ...StyleSheet.absoluteFillObject,
   mixBlendMode: 'color',
-  zIndex:4
 },
   stickerContainer: {
   position: 'absolute',
@@ -1329,8 +1418,6 @@ const styles = StyleSheet.create({
   },
   brightnessOverlay: {
     ...StyleSheet.absoluteFillObject,
-      zIndex:4
-
   },
   deleteZone: {
   position: 'absolute',
@@ -1400,7 +1487,7 @@ deleteText: {
   icon: {
     marginVertical: hp('1%'),
     padding: 10,
-    backgroundColor: '#4CBB17',
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
     borderRadius: 30,
   },
   speedText: {
@@ -1481,10 +1568,6 @@ doneButton: {
     color: '#fff',
     fontWeight: 'bold',
   },
-  pipResizeRotateIcon: {
-  bottom: -15,
-  right: -15,
-},
 });
 
 export default EditingScreen;

@@ -1,16 +1,27 @@
-import React, { useState } from 'react';
-import { Image, View, PanResponder } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { Image, View, PanResponder, Animated, Text, Dimensions } from 'react-native';
 
 const ZoomableImage = ({ source, style }) => {
   const [scale, setScale] = useState(1);
-  const [translateX, setTranslateX] = useState(0);
-  const [translateY, setTranslateY] = useState(0);
+  const [lastScale, setLastScale] = useState(1);
   const [lastDistance, setLastDistance] = useState(0);
   const [imageError, setImageError] = useState(false);
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
+
+  const pan = useRef(new Animated.ValueXY()).current;
+
+  const screenWidth = Dimensions.get('window').width;
+  const screenHeight = Dimensions.get('window').height;
 
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
+    onPanResponderGrant: () => {
+      pan.setOffset({
+        x: pan.x._value,
+        y: pan.y._value
+      });
+    },
     onPanResponderMove: (evt, gestureState) => {
       if (evt.nativeEvent.changedTouches.length === 2) {
         // Zooming
@@ -22,43 +33,61 @@ const ZoomableImage = ({ source, style }) => {
         );
 
         if (lastDistance !== 0) {
-          const newScale = scale * (distance / lastDistance);
+          const newScale = lastScale * (distance / lastDistance);
           setScale(Math.max(1, Math.min(newScale, 3))); // Limit scale between 1 and 3
         }
         setLastDistance(distance);
       } else {
         // Panning
-        setTranslateX(translateX + gestureState.dx);
-        setTranslateY(translateY + gestureState.dy);
+        Animated.event([null, { dx: pan.x, dy: pan.y }], { useNativeDriver: false })(evt, gestureState);
       }
     },
     onPanResponderRelease: () => {
+      setLastScale(scale);
       setLastDistance(0);
+      pan.flattenOffset();
     },
   });
 
- return (
-    <View {...panResponder.panHandlers} style={[style, { overflow: 'hidden' }]}>
-      <Image
-        source={source}
+  // Log the source prop to check if it's correctly passed
+  console.log('Image source:', source);
+
+  return (
+    <View style={[style, { overflow: 'hidden' }]}>
+      <Animated.View 
+        {...panResponder.panHandlers}
         style={[
           style,
           {
             transform: [
-              { scale: scale },
-              { translateX: translateX },
-              { translateY: translateY },
-            ],
-          },
+              { translateX: pan.x },
+              { translateY: pan.y },
+              { scale: scale }
+            ]
+          }
         ]}
-        resizeMode="contain"
-        onError={(e) => {
-          console.error('Image loading error:', e.nativeEvent.error);
-          setImageError(true);
-        }}
-      />
-      {imageError && <Text style={{ color: 'red' }}>Error loading image</Text>}
+      >
+        <Image
+          source={source}
+          style={[style, { width: '100%', height: '100%' }]}
+          resizeMode="contain"
+          onError={(e) => {
+            console.error('Image loading error:', e.nativeEvent.error);
+            setImageError(true);
+          }}
+          onLoad={(event) => {
+            const { width, height } = event.nativeEvent.source;
+            console.log('Image loaded. Dimensions:', width, height);
+            setImageDimensions({ width, height });
+          }}
+        />
+      </Animated.View>
+      {imageError && <Text style={{ color: 'red', position: 'absolute', top: 10, left: 10 }}>Error loading image</Text>}
+      <Text style={{ position: 'absolute', bottom: 10, left: 10, color: 'white', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        Image dimensions: {imageDimensions.width}x{imageDimensions.height}
+      </Text>
     </View>
   );
 };
+
 export default ZoomableImage;

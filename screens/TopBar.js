@@ -5,7 +5,7 @@ import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-nat
 import Icon from 'react-native-vector-icons/Ionicons';
 import Icon1 from 'react-native-vector-icons/FontAwesome';
 import Icon2 from 'react-native-vector-icons/MaterialCommunityIcons';
-import Icon3 from 'react-native-vector-icons/FontAwesome5';
+import Icon3 from 'react-native-vector-icons/Octicons';
 import Icon4 from 'react-native-vector-icons/Entypo';
 
 import { useNavigation } from '@react-navigation/native';
@@ -93,30 +93,30 @@ const [currentColor, setCurrentColor] = useState('#ffffff');
       navigation.navigate('VideoCropScreen', { video: currentMedia });
     } else {
       ImagePicker.openCropper({
-        path: currentMedia.uri,
-        width: 300,
-        height: 400,
-        cropperToolbarTitle: 'Crop Image',
-        cropperActiveWidgetColor: '#3498db',
-        cropperStatusBarColor: '#3498db',
-        cropperToolbarColor: '#3498db',
-        cropperToolbarWidgetColor: '#ffffff',
-        showCropGuidelines: true,
-        showCropFrame: true,
-        enableRotationGesture: true,
-        enableZoom: true,
-        freeStyleCropEnabled: true,
-      }).then(image => {
-        console.log('Cropped image:', image);
-        if (onImageCropped) {
-          onImageCropped({ uri: image.path });
-        } else {
-          console.warn('onImageCropped is not defined');
-        }
-      }).catch(error => {
-        console.log('Cropping error:', error);
-        Alert.alert('Error', 'Failed to crop image. Please try again.');
-      });
+  path: currentMedia.uri,
+  width: 300,
+  height: 400,
+  cropperToolbarTitle: 'Crop Image',
+  cropperActiveWidgetColor: '#3498db',
+  cropperStatusBarColor: '#3498db',
+  cropperToolbarColor: '#3498db',
+  cropperToolbarWidgetColor: '#ffffff',
+  showCropGuidelines: true,
+  showCropFrame: true,
+  enableRotationGesture: true,
+  enableZoom: true,
+  freeStyleCropEnabled: true,
+}).then(image => {
+  console.log('Cropped image:', image);
+  if (onImageCropped) {
+    onImageCropped({ uri: image.path });
+  } else {
+    console.warn('onImageCropped is not defined');
+  }
+}).catch(error => {
+  console.log('Cropping error:', error);
+  Alert.alert('Error', 'Failed to crop image. Please try again.');
+});
     }
   } else if (icon.adjustment) {
     setCurrentAdjustment(icon.adjustment);
@@ -278,20 +278,20 @@ const [currentColor, setCurrentColor] = useState('#ffffff');
 const FilterBar = () => (
   <ScrollView 
     horizontal 
-    style={styles.scrollBar} 
-    contentContainerStyle={styles.scrollBarContent}
+    style={styles.filterBar} 
+    contentContainerStyle={styles.filterBarContent}
     showsHorizontalScrollIndicator={false}
   >
     {FILTERS.map((filter, index) => (
       <TouchableOpacity
         key={index}
         style={[
-          styles.scrollBarItem,
+          styles.filterBarItem,
           selectedFilter === filter && styles.selectedFilterItem
         ]}
         onPress={() => onSelectFilter(filter)}
       >
-        <Text style={styles.scrollBarText}>{filter.title}</Text>
+        <Text style={styles.filterBarText}>{filter.title}</Text>
       </TouchableOpacity>
     ))}
   </ScrollView>
@@ -361,7 +361,7 @@ const FilterBar = () => (
           </TouchableOpacity>
           <TouchableOpacity style={styles.bottomBarItem}
           onPress={() => navigation.navigate('UploadScreen')}>
-            <Icon name="arrow-redo" size={24} color="#000" />
+            <Icon3 name="paper-airplane" size={24} color="#000" />
             <Text style={styles.bottomBarText}>Share</Text>
           </TouchableOpacity>
         </View>
@@ -382,32 +382,27 @@ const FilterBar = () => (
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-top:700,
+    top: hp('83%'),
     left: 0,
     right: 0,
     bottom: 0,
-    zIndex:3
-// Add this line
-
+    zIndex: 3
   },
- 
- 
   dropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
+    padding: wp('2%'),
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
   dropdownItemText: {
     marginLeft: wp('2%'),
-    fontSize: 16,
+    fontSize: wp('4%'),
   },
-scrollBarContent: {
-  flexDirection: 'row',
-  alignItems: 'center',
-},
-
+  scrollBarContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   scrollBar: {
     position: 'absolute',
     bottom: hp('10%'),
@@ -417,7 +412,6 @@ scrollBarContent: {
     paddingVertical: hp('1%'),
     borderTopWidth: 1,
     borderTopColor: '#eee',
-    
   },
   scrollBarItem: {
     alignItems: 'center',
@@ -426,8 +420,8 @@ scrollBarContent: {
     marginHorizontal: wp('2%'),
   },
   scrollBarText: {
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: wp('3%'),
+    marginTop: hp('0.5%'),
     textAlign: 'center',
   },
   bottomBar: {
@@ -447,72 +441,104 @@ scrollBarContent: {
     alignItems: 'center',
   },
   bottomBarText: {
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: wp('3%'),
+    marginTop: hp('0.5%'),
   },
-
- adjustBar: {
-  position: 'absolute',
-  bottom: hp('10%'), // Match this with scrollBar's bottom
-  left: 0,
-  right: 0,
-  backgroundColor: 'white',
-  paddingVertical: hp('1%'),
-  paddingHorizontal: wp('4%'),
-  borderTopWidth: 1,
-  borderTopColor: '#eee',
-},
+  adjustBar: {
+    position: 'absolute',
+    bottom: hp('10%'),
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    paddingVertical: hp('1%'),
+    paddingHorizontal: wp('4%'),
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
   adjustmentSlider: {
     flexDirection: 'column',
     alignItems: 'stretch',
     marginBottom: hp('2%'),
   },
   adjustText: {
-    fontSize: 16,
+    fontSize: wp('4%'),
     marginBottom: hp('1%'),
     textAlign: 'center',
   },
   slider: {
     width: wp('90%'),
-    height: 40,
+    height: hp('5%'),
     alignSelf: 'center',
   },
   selectedFilterItem: {
     backgroundColor: 'rgba(0, 0, 0, 0.1)',
-    borderRadius: 5,
+    borderRadius: wp('1%'),
   },
   speedButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    color:'#fff'
+    color: '#fff'
   },
   speedText: {
-    marginLeft: -2,
-    fontSize: 10,
+    marginLeft: wp('-0.5%'),
+    fontSize: wp('2.5%'),
     fontWeight: 'bold',
   },
   colorPickerContainer: {
-  flex: 1,
-  justifyContent: 'center',
-  alignItems: 'center',
-  backgroundColor: 'rgba(0, 0, 0, 0.7)',
-  padding: 20,
-},
-colorPickerButtons: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  width: '100%',
-  marginTop: 20,
-},
-colorPickerButton: {
-  padding: 10,
-  backgroundColor: '#fff',
-  borderRadius: 5,
-},
-colorPickerButtonText: {
-  color: '#000',
-  fontWeight: 'bold',
-},
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: wp('5%'),
+  },
+  colorPickerButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: hp('2.5%'),
+  },
+  colorPickerButton: {
+    padding: wp('2.5%'),
+    backgroundColor: '#fff',
+    borderRadius: wp('1%'),
+  },
+  colorPickerButtonText: {
+    color: '#000',
+    fontWeight: 'bold',
+    fontSize: wp('3.5%'),
+  },
+  filterBar: {
+    position: 'absolute',
+    bottom: hp('10%'),
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    paddingVertical: hp('1%'),
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  filterBarContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  filterBarItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: wp('20%'),
+    marginHorizontal: wp('2%'),
+    paddingVertical: hp('1%'),
+  },
+  filterBarText: {
+    fontSize: wp('3%'),
+    marginTop: hp('0.5%'),
+    textAlign: 'center',
+    color: '#000'
+  },
+  selectedFilterItem: {
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    borderRadius: wp('1%'),
+  },
+
 });
 
 export default TopBar;

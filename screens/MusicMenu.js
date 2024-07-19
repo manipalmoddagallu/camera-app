@@ -7,6 +7,7 @@ import axios from 'axios';
 import { getAll, SortSongFields, SortSongOrder } from 'react-native-get-music-files';
 import Sound from 'react-native-sound';
 
+
 const MusicMenu = ({ isVisible, onClose, onSelectMusic }) => {
   const [activeTab, setActiveTab] = useState('device');
   const [deviceMusic, setDeviceMusic] = useState([]);
@@ -114,43 +115,39 @@ const MusicMenu = ({ isVisible, onClose, onSelectMusic }) => {
       animationIn="slideInUp"
       animationOut="slideOutDown"
     >
-     
-        <View style={styles.overlay}>
-         <ImageBackground 
-        source={require('./assets/images/BG.png')} // Adjust the path as needed
-        style={styles.backgroundImage}
-      >
-       
-            <View style={styles.tabs}>
-              <TouchableOpacity
-                style={[styles.tab, activeTab === 'device' && styles.activeTab]}
-                onPress={() => setActiveTab('device')}
-              >
-                <Text style={styles.tabText}>Music</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.tab, activeTab === 'online' && styles.activeTab]}
-                onPress={() => setActiveTab('online')}
-              >
-                <Text style={styles.tabText}>Online Music</Text>
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search music..."
-              placeholderTextColor="#999"
-              value={searchText}
-              onChangeText={setSearchText}
-            />
-            <FlatList
-              data={filteredMusic}
-              renderItem={renderMusicItem}
-              keyExtractor={(item) => item.id.toString()}
-            />
-        
-                </ImageBackground>
-        </View>
-
+      <View style={styles.overlay}>
+        <ImageBackground 
+          source={require('./assets/images/BG.png')}
+          style={styles.backgroundImage}
+        >
+          <View style={styles.tabs}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'device' && styles.activeTab]}
+              onPress={() => setActiveTab('device')}
+            >
+              <Text style={styles.tabText}>Music</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'online' && styles.activeTab]}
+              onPress={() => setActiveTab('online')}
+            >
+              <Text style={styles.tabText}>Online Music</Text>
+            </TouchableOpacity>
+          </View>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search music..."
+            placeholderTextColor="#999"
+            value={searchText}
+            onChangeText={setSearchText}
+          />
+          <FlatList
+            data={filteredMusic}
+            renderItem={renderMusicItem}
+            keyExtractor={(item, index) => ((item.id || index).toString())}
+          />
+        </ImageBackground>
+      </View>
     </Modal>
   );
 };
@@ -159,12 +156,13 @@ const styles = StyleSheet.create({
   modal: {
     margin: 0,
     justifyContent: 'flex-end',
+    zIndex: 4
   },
   backgroundImage: {
-      height: hp('50%'),
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
+    height: hp('50%'),
+    borderTopLeftRadius: wp('5%'),
+    borderTopRightRadius: wp('5%'),
+    padding: wp('5%'),
     flex: 1,
     justifyContent: 'flex-end',
   },
@@ -173,19 +171,19 @@ const styles = StyleSheet.create({
   },
   container: {
     height: hp('50%'),
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
+    borderTopLeftRadius: wp('5%'),
+    borderTopRightRadius: wp('5%'),
+    padding: wp('5%'),
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
   },
   tabs: {
     flexDirection: 'row',
-    marginBottom: 20,
+    marginBottom: hp('2.5%'),
   },
   tab: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: hp('1.5%'),
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
@@ -195,30 +193,33 @@ const styles = StyleSheet.create({
   tabText: {
     color: '#000',
     fontWeight: 'bold',
+    fontSize: wp('4%'),
   },
   searchInput: {
     borderWidth: 1,
     borderColor: '#999',
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 10,
+    borderRadius: wp('1%'),
+    padding: wp('2.5%'),
+    marginBottom: hp('1.5%'),
     color: '#000',
+    fontSize: wp('4%'),
   },
   musicItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: hp('1.5%'),
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
   musicTitle: {
-    fontSize: 16,
+    fontSize: wp('4%'),
     color: '#000',
   },
   playStopText: {
     color: '#0066cc',
     fontWeight: 'bold',
+    fontSize: wp('4%'),
   },
 });
 

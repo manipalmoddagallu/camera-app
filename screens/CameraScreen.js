@@ -348,6 +348,9 @@ const navigateToEditingScreen = (videoPath) => {
       onRecordingError: (error) => {
         Alert.alert('Error', 'Failed to record boomerang video. Please try again.');
       },
+       onRecordingFinished: (video) => {
+      processBoomerangVideo(video.path);
+    },
     };
 
     await camera.current.startRecording(options);
@@ -462,11 +465,12 @@ const navigateToEditingScreen = (videoPath) => {
                   </View>
                 )}
                 
-                <TouchableOpacity style={styles.flashButton} onPress={toggleFlash}>
+                <TouchableOpacity style={[styles.iconButton, styles.flashButton]} onPress={toggleFlash}>
                   {flash === 'on' && <Icon1 name="flash" size={30} color="white" />}
                   {flash === 'off' && <Icon2 name="flash-off" size={30} color="white" />}
                   {flash === 'auto' && <Icon3 name="flash-auto" size={30} color="white" />}
                 </TouchableOpacity>
+
                 
                 <TouchableOpacity style={styles.imageButton} onPress={toggleModal}>
                   <Image source={imageSource} style={{ width: 30, height: 30 }} />
@@ -478,13 +482,13 @@ const navigateToEditingScreen = (videoPath) => {
                   </View>
                 )}
                 
-                <TouchableOpacity style={styles.galleryButton} onPress={openGallery}>
-                  <Icon name="images" size={30} color="white" />
-                </TouchableOpacity>
+               <TouchableOpacity style={[styles.iconButton, styles.galleryButton]} onPress={openGallery}>
+  <Icon name="images" size={30} color="white" />
+</TouchableOpacity>
                 
-                <TouchableOpacity style={styles.flipButton} onPress={flipCamera}>
-                  <Icon name="camera-rotate" size={30} color="white" />
-                </TouchableOpacity>
+             <TouchableOpacity style={[styles.iconButton, styles.flipButton]} onPress={flipCamera}>
+  <Icon name="camera-rotate" size={30} color="white" />
+</TouchableOpacity>
                 
                 <TouchableOpacity
                   style={styles.takePictureButton}
@@ -581,7 +585,7 @@ const navigateToEditingScreen = (videoPath) => {
                   setIsModalVisible(false);
                 }}
               >
-                <Image source={require('../assets/camera_screen/Group34.png')} style={styles.overlayImage1} />
+                <Image source={require('../assets/camera_screen/Group33.png')} style={styles.overlayImage1} />
               </TouchableOpacity>
             </View>
           </TouchableWithoutFeedback>
@@ -603,6 +607,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#F5FCFF',
+    height: 100
   },
   cameraContainer: {
     flex: 1,
@@ -614,39 +619,36 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
   },
+  iconButton: {
+    backgroundColor: '#4CBB17',
+    padding: 15,
+    borderRadius: 30,
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
   flashButton: {
     position: 'absolute',
     top: 20,
     alignSelf: 'center',
-    backgroundColor: '#4CBB17',
-    padding: 10,
-    borderRadius: 5,
   },
-  galleryButton: {
+ galleryButton: {
     position: 'absolute',
     bottom: 20,
     left: 20,
-    backgroundColor: '#4CBB17',
-    padding: 10,
-    borderRadius: 5,
   },
-  flipButton: {
+   flipButton: {
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: '#4CBB17',
-    padding: 10,
-    borderRadius: 5,
-    color: '#4CBB17'
   },
-  takePictureButton: {
+   takePictureButton: {
     position: 'absolute',
     bottom: 20,
     alignSelf: 'center',
-    backgroundColor: '#4CBB17',
-    padding: 10,
-    borderRadius: 5,
   },
+
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
