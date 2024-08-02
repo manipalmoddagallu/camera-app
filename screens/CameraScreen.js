@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, StyleSheet, Alert, Text, Platform, TouchableOpacity, Image, Modal, TouchableWithoutFeedback, ScrollView } from 'react-native';
+import { View, StyleSheet, Alert, Text, Platform, TouchableOpacity, Image, Modal, TouchableWithoutFeedback, ScrollView,Dimensions } from 'react-native';
 import { Camera } from 'react-native-vision-camera';
 import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import Geolocation from '@react-native-community/geolocation';
@@ -207,30 +207,33 @@ const CameraScreen = ({ navigation }) => {
   };
 
   const takePicture = async () => {
-  if (camera.current == null) {
-    Alert.alert('Camera not initialized', 'Camera is not ready yet.');
-    return;
-  }
-  try {
-    const photo = await camera.current.takePhoto({
-      quality: 1, // Highest quality (0 to 1)
-      flash: flash,
-      enableShutterSound: false,
-      skipMetadata: false, // Keep metadata for better quality
-      enableAutoStabilization: true,
-      outputOrientation: 'portrait',
-      photoCodec: 'jpeg', // JPEG for maximum compatibility
-      format: 'jpg', // Ensure JPEG format
-      imageType: 'compressed', // Use compressed for better compatibility
-      ...(selectedFilter && selectedFilter.id !== 1 && { filter: selectedFilter.filterComponent }),
-    });
+    if (camera.current == null) {
+      Alert.alert('Camera not initialized', 'Camera is not ready yet.');
+      return;
+    }
+    try {
+      const { width, height } = Dimensions.get('window');
+      const isPortrait = height > width;
+
+      const photo = await camera.current.takePhoto({
+        quality: 1,
+        flash: flash,
+        enableShutterSound: false,
+        skipMetadata: false,
+        enableAutoStabilization: true,
+        outputOrientation: isPortrait ? 'portrait' : 'landscapeRight',
+        photoCodec: 'png',
+        format: 'png',
+        imageType: 'original',
+        ...(selectedFilter && selectedFilter.id !== 1 && { filter: selectedFilter.filterComponent }),
+      });
     
-    const imagePath = Platform.OS === 'ios' ? photo.path : `file://${photo.path}`;
-    navigation.navigate('Layout_Screen', { selectedImage: imagePath });
-  } catch (error) {
-    Alert.alert('Error', `Failed to take picture: ${error.message}`);
-  }
-};
+      const imagePath = Platform.OS === 'ios' ? photo.path : `file://${photo.path}`;
+      navigation.navigate('Layout_Screen', { selectedImage: imagePath });
+    } catch (error) {
+      Alert.alert('Error', `Failed to take picture: ${error.message}`);
+    }
+  };
 
   const flipCamera = () => {
     if (devices.length > 0) {
@@ -242,7 +245,7 @@ const CameraScreen = ({ navigation }) => {
 
   const openGallery = () => {
   setIsGalleryMenuVisible(true);
-};
+  };
 
   const toggleFlash = () => {
     setFlash(currentFlash => {
@@ -466,15 +469,15 @@ const navigateToEditingScreen = (videoPath) => {
                 )}
                 
                 <TouchableOpacity style={[styles.iconButton, styles.flashButton]} onPress={toggleFlash}>
-                  {flash === 'on' && <Icon1 name="flash" size={30} color="white" />}
-                  {flash === 'off' && <Icon2 name="flash-off" size={30} color="white" />}
-                  {flash === 'auto' && <Icon3 name="flash-auto" size={30} color="white" />}
+                  {flash === 'on' && <Icon1 name="flash" size={24} color="white" />}
+                  {flash === 'off' && <Icon2 name="flash-off" size={24} color="white" />}
+                  {flash === 'auto' && <Icon3 name="flash-auto" size={24} color="white" />}
                 </TouchableOpacity>
 
                 
                 <TouchableOpacity style={styles.imageButton} onPress={toggleModal}>
-                  <Image source={imageSource} style={{ width: 30, height: 30 }} />
-                </TouchableOpacity>
+  <Image source={imageSource} style={styles.imageButtonIcon} />
+</TouchableOpacity>
                 
                 {isRecording && (
                   <View style={styles.countdownContainer}>
@@ -483,11 +486,11 @@ const navigateToEditingScreen = (videoPath) => {
                 )}
                 
                <TouchableOpacity style={[styles.iconButton, styles.galleryButton]} onPress={openGallery}>
-  <Icon name="images" size={30} color="white" />
+  <Icon name="images" size={24} color="white" />
 </TouchableOpacity>
                 
              <TouchableOpacity style={[styles.iconButton, styles.flipButton]} onPress={flipCamera}>
-  <Icon name="camera-rotate" size={30} color="white" />
+  <Icon name="camera-rotate" size={24} color="white" />
 </TouchableOpacity>
                 
                 <TouchableOpacity
@@ -645,7 +648,7 @@ const styles = StyleSheet.create({
   },
    takePictureButton: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 30,
     alignSelf: 'center',
   },
 
@@ -672,14 +675,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  imageButton: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    backgroundColor: '#4CBB17',
-    padding: 10,
-    borderRadius: 5,
-  },
+ imageButton: {
+  position: 'absolute',
+  top: 24,
+  right: 20,
+  backgroundColor: '#4CBB17',
+  padding: 10,
+  borderRadius: 25,
+  width: 50,
+  height: 50,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+imageButtonIcon: {
+  width: 30,
+  height: 30,
+},
   modalContainer: {
     flex: 1,
     justifyContent: 'center',

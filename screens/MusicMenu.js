@@ -1,4 +1,3 @@
-// MusicMenu.js
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, TextInput, ImageBackground } from 'react-native';
 import Modal from 'react-native-modal';
@@ -6,7 +5,6 @@ import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-nat
 import axios from 'axios';
 import { getAll, SortSongFields, SortSongOrder } from 'react-native-get-music-files';
 import Sound from 'react-native-sound';
-
 
 const MusicMenu = ({ isVisible, onClose, onSelectMusic }) => {
   const [activeTab, setActiveTab] = useState('device');
@@ -111,7 +109,7 @@ const MusicMenu = ({ isVisible, onClose, onSelectMusic }) => {
       onSwipeComplete={onClose}
       swipeDirection={['down']}
       style={styles.modal}
-      backdropOpacity={0}
+      backdropOpacity={0.7}
       animationIn="slideInUp"
       animationOut="slideOutDown"
     >
@@ -197,7 +195,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     borderWidth: 1,
-    borderColor: '#999',
+    borderColor: '#000',
     borderRadius: wp('1%'),
     padding: wp('2.5%'),
     marginBottom: hp('1.5%'),
@@ -217,7 +215,7 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   playStopText: {
-    color: '#0066cc',
+    color: '#000',
     fontWeight: 'bold',
     fontSize: wp('4%'),
   },

@@ -1,20 +1,25 @@
-import React, { useState, useRef, useMemo } from 'react';
-import { View, Image, StyleSheet, TouchableOpacity, PanResponder, ScrollView } from 'react-native';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { View, Image, StyleSheet, TouchableOpacity, PanResponder, ScrollView, Dimensions } from 'react-native';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Icon2 from 'react-native-vector-icons/FontAwesome5';
-
+import Video from 'react-native-video';
 import Svg, { Path, Circle } from 'react-native-svg';
 import ViewShot from 'react-native-view-shot';
+import LayoutView from './Layouts/LayoutView'; // Assuming you have a LayoutView component
+
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 const DrawingScreen = ({ route, navigation }) => {
-  const { image } = route.params;
+  const { image, mediaType, originalMedia, layoutData, selectedLayoutId } = route.params;
   const [paths, setPaths] = useState([]);
   const [currentPath, setCurrentPath] = useState(null);
   const [mode, setMode] = useState('draw');
   const [currentColor, setCurrentColor] = useState('#000000');
   const [eraserPosition, setEraserPosition] = useState(null);
-  const viewShotRef = useRef();
+  const videoRef = useRef();
+  const viewShotRef = useRef(null);
+
 
   const ERASER_SIZE = 20;
 
@@ -111,18 +116,72 @@ const DrawingScreen = ({ route, navigation }) => {
   const handleClear = () => {
     setPaths([]);
   };
-
+  const captureVideoFrame = async () => {
+    if (videoRef.current && viewShotRef.current) {
+      try {
+        const capturedFrame = await viewShotRef.current.capture();
+        setCurrentFrame(capturedFrame);
+      } catch (error) {
+        console.error('Error capturing video frame:', error);
+        Alert.alert('Error', 'Failed to capture video frame. Please try again.');
+      }
+    }
+  };
   const handleDone = async () => {
     try {
-      const uri = await viewShotRef.current.capture({
-        format: "png",
-        quality: 1,
-        result: "tmpfile",
-        transparent: true
+      if (mediaType === 'video') {
+        await captureVideoFrame();
+      }
+
+     const uri = await viewShotRef.current.capture({
+  format: "png",
+  quality: 1,
+  result: "tmpfile",
+  transparent: true
+});
+      console.log('Captured edited image URI:', uri);
+      navigation.navigate('EditingScreen', { 
+        editedImage: uri,
+        media: { uri: uri, type: mediaType }
       });
-      navigation.navigate('EditingScreen', { editedImage: uri });
     } catch (error) {
       console.error('Error capturing image:', error);
+      Alert.alert('Error', 'Failed to save the edited image.');
+      navigation.goBack();
+    }
+  };
+  const renderMedia = () => {
+    switch (mediaType) {
+      case 'video':
+        return (
+          <Video
+            ref={videoRef}
+            source={{ uri: image }}
+            style={styles.media}
+            resizeMode="contain"
+            repeat
+            paused={false}
+          />
+        );
+      case 'layout':
+        return (
+          <LayoutView
+            layoutData={layoutData}
+            selectedLayoutId={selectedLayoutId}
+            getSelectedImage={(layoutId, tabId) => {
+              const layout = layoutData.find(item => item.id === layoutId);
+              if (layout) {
+                const image = layout.images.find(img => img.id === tabId);
+                return image ? image.image : null;
+              }
+              return null;
+            }}
+          />
+        );
+      default:
+        return (
+          <Image source={{ uri: image }} style={styles.media} resizeMode="contain" />
+        );
     }
   };
 
@@ -142,9 +201,9 @@ const DrawingScreen = ({ route, navigation }) => {
           <Icon name="checkmark" size={24} color="#000" />
         </TouchableOpacity>
       </View>
-      <ViewShot ref={viewShotRef} style={styles.imageContainer} options={{ format: "png", quality: 1 }}>
+      <ViewShot ref={viewShotRef} style={styles.mediaContainer} options={{ format: "png", quality: 1 }}>
         <View {...panResponder.panHandlers} style={StyleSheet.absoluteFill}>
-          <Image source={{ uri: image }} style={styles.image} resizeMode="contain" />
+          {renderMedia()}
           <Svg style={[StyleSheet.absoluteFill, { backgroundColor: 'transparent' }]}>
             {paths.map(path => (
               <Path
@@ -193,12 +252,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  imageContainer: {
-    width: wp('100%'),
-    height: hp('82%'),
+  mediaContainer: {
+    width: screenWidth,
+    height: screenHeight - hp('18%'), // Adjust this value to fit your layout
     backgroundColor: 'transparent',
   },
-  image: {
+  media: {
     width: '100%',
     height: '100%',
   },

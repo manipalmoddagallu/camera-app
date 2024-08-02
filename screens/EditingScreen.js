@@ -1,22 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Image,
-  StyleSheet,
-  SafeAreaView,
-  Alert,
-  Text,
-  PanResponder,
-  Modal,
-  Animated,
-  TouchableOpacity,
-  Platform,TextInput,ScrollView,ActivityIndicator
-} from 'react-native';
+import {View,Image,StyleSheet,SafeAreaView,Alert,Text,Modal,Animated,TouchableOpacity,PanResponder,TextInput,ScrollView,ActivityIndicator,TouchableWithoutFeedback} from 'react-native';
 import Video from 'react-native-video';
-import {
-  widthPercentageToDP as wp,
-  heightPercentageToDP as hp,
-} from 'react-native-responsive-screen';
+import { ColorMatrix, concatColorMatrices } from 'react-native-color-matrix-image-filters';
+import {widthPercentageToDP as wp,heightPercentageToDP as hp,} from 'react-native-responsive-screen';
 import { CameraRoll } from "@react-native-camera-roll/camera-roll";
 import TopBar from './TopBar';
 import FriendsList from './FriendsList';
@@ -25,7 +11,6 @@ import LocationMenu from './LocationMenu';
 import PipMenu from './PipMenu';
 import { FILTERS } from './utils/Filters';
 import StickerScreen from './StickerScreen';
-import { FFmpegKit } from 'ffmpeg-kit-react-native';
 import FastImage from 'react-native-fast-image';
 import RNFS from 'react-native-fs';
 import axios from 'axios';
@@ -33,7 +18,6 @@ import ViewShot from "react-native-view-shot";
 import Icon from 'react-native-vector-icons/Ionicons';
 import Icon1 from 'react-native-vector-icons/FontAwesome';
 import Icon2 from 'react-native-vector-icons/MaterialCommunityIcons';
-import Icon3 from 'react-native-vector-icons/FontAwesome5';
 import Icon4 from 'react-native-vector-icons/Entypo';
 import MusicMenu from './MusicMenu';
 import RecordingMenu from './RecordingMenu';
@@ -42,18 +26,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import LayoutView from './Layouts/LayoutView';
 
 const EditingScreen = ({ route, navigation }) => {
- const { 
-    media = null, 
-    filterIndex = -1, 
-    draftedMedia = null,
-    originalImageUri = null, 
-    selectedLayoutImages = [],
-    selectedLayoutId = null,
-    layoutData = []
-  } = route?.params || {};
-    const [currentMedia, setCurrentMedia] = useState(media);
-    const [isFromLayout, setIsFromLayout] = useState(false);
-
+  const { media = null, filterIndex = -1, draftedMedia = null,originalImageUri = null, selectedLayoutImages = [], selectedLayoutId = null,layoutData = []} = route?.params || {};
+  const [currentMedia, setCurrentMedia] = useState(route.params?.croppedVideo || route.params?.media || null);
+  const [isFromLayout, setIsFromLayout] = useState(false);
   const [isVideo, setIsVideo] = useState(media?.type === 'video' || media?.type === 'boomerang');
   const [selectedFilter, setSelectedFilter] = useState(FILTERS[filterIndex] || null);
   const [selectedHashtags, setSelectedHashtags] = useState([]);
@@ -103,15 +78,20 @@ const EditingScreen = ({ route, navigation }) => {
   const handlePipMenuPress = () => setIsPipMenuVisible(true);
   const handleClosePipMenu = () => setIsPipMenuVisible(false);
   const handleSelectFilter = (filter) => setSelectedFilter(filter);
-  const SelectedFilterComponent = selectedFilter ? selectedFilter.filterComponent : null;
   const [previewImage, setPreviewImage] = useState(null);
+  const [previewOverlayElements, setPreviewOverlayElements] = useState(null);
   const [selectedColor, setSelectedColor] = useState('#FFFFFF');
-   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   const toggleDropdown = () => setIsDropdownVisible(!isDropdownVisible);
   const [pipZoomMode, setPipZoomMode] = useState(false);
   const [editingTextId, setEditingTextId] = useState(null);
-
-  
+  const [croppedImage, setCroppedImage] = useState(null);
+  const SelectedFilterComponent = selectedFilter ? selectedFilter.filterComponent : React.Fragment;
+  const [isPipTouched, setIsPipTouched] = useState(false);
+  const [saturation, setSaturation] = useState(1);
+  const [adjustmentsChanged, setAdjustmentsChanged] = useState(false);
+  const [isPipSelected, setIsPipSelected] = useState(false);
+  const [selectedPipId, setSelectedPipId] = useState(null);
   useEffect(() => {
     if (originalImageUri) {
       setCurrentMedia({ uri: originalImageUri, type: 'photo' });
@@ -120,7 +100,31 @@ const EditingScreen = ({ route, navigation }) => {
   useEffect(() => {
     fetchStickers();
   }, []);
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      const croppedVideo = route.params?.croppedVideo;
+      const newMedia = route.params?.media;
 
+      if (croppedVideo) {
+        console.log('Received cropped video:', croppedVideo);
+        setCurrentMedia(croppedVideo);
+        setIsVideo(true);
+      } else if (newMedia) {
+        console.log('Received new media:', newMedia);
+        setCurrentMedia(newMedia);
+        setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');
+      } else if (!currentMedia) {
+        console.log('No media received');
+        Alert.alert('Error', 'No media provided', [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+      } else {
+        console.log('Using existing media:', currentMedia);
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, route.params, currentMedia]);
   useEffect(() => {
     if (draftedMedia) {
       setCurrentMedia({ uri: draftedMedia.editedImageUri || draftedMedia.uri, type: draftedMedia.type });
@@ -145,13 +149,12 @@ const EditingScreen = ({ route, navigation }) => {
       setPlaybackSpeed(draftedMedia.playbackSpeed || 1);
     }
   }, [draftedMedia]);
-
   useEffect(() => {
       if (media) {
         setCurrentMedia(media);
       }
-    }, [media]);
-      useEffect(() => {
+  }, [media]);
+  useEffect(() => {
     if (currentMedia) {
       RNFS.exists(currentMedia.uri.replace('file://', ''))
         .then((exists) => {
@@ -162,7 +165,6 @@ const EditingScreen = ({ route, navigation }) => {
         });
     }
   }, [currentMedia]);
-
   useEffect(() => {
     if (!currentMedia) {
       console.log('No media received');
@@ -173,7 +175,6 @@ const EditingScreen = ({ route, navigation }) => {
       console.log('Received media:', currentMedia);
     }
   }, [currentMedia, navigation]);
-
   useEffect(() => {
   const unsubscribe = navigation.addListener('focus', () => {
     const trimmedVideo = route.params?.trimmedVideo;
@@ -221,8 +222,9 @@ setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');    } els
         setCurrentMedia(trimmedVideo);
         setIsVideo(true);
       } else if (croppedVideo) {
-        setCurrentMedia(croppedVideo);
-        setIsVideo(true);
+       console.log('Received cropped video:', croppedVideo);
+      setCurrentMedia(croppedVideo);
+      setIsVideo(true);
       } else if (editedImage) {
         setCurrentMedia({ uri: editedImage, type: 'photo' });
         setIsVideo(false);
@@ -268,51 +270,137 @@ setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');    } els
       ]);
     }
   }, [media, selectedLayoutImages]);
-const handleBrushPress = async () => {
-    let imageUri;
-    
-    if (isFromLayout) {
-      // Capture the layout view
-      imageUri = await viewShotRef.current.capture();
-    } else if (isVideo) {
-      // Generate a thumbnail for video
-      try {
-        const { path } = await createThumbnail({
-          url: currentMedia.uri,
-          timeStamp: 1000,
-        });
-        imageUri = path;
-      } catch (err) {
-        console.error("Error creating video thumbnail:", err);
-        Alert.alert("Error", "Failed to create video thumbnail");
-        return;
-      }
-    } else {
-      // For regular images
-      imageUri = currentMedia.uri;
+  const handleBrushPress = async () => {
+    if (!viewShotRef) {
+      console.error('ViewShot ref is not available');
+      Alert.alert('Error', 'The drawing tool is not ready yet. Please try again.');
+      return;
     }
 
-    if (imageUri) {
-      navigation.navigate('DrawingScreen', { 
-        image: imageUri,
-        mediaType: isFromLayout ? 'layout' : isVideo ? 'video' : 'image',
-        originalMedia: currentMedia,
-        layoutData: isFromLayout ? layoutData : null,
-        selectedLayoutId: isFromLayout ? selectedLayoutId : null
-      });
-    } else {
-      Alert.alert('Error', 'Unable to process this media type for drawing.');
+    try {
+      console.log('Current media:', currentMedia);
+      console.log('Is video:', isVideo);
+      console.log('Is from layout:', isFromLayout);
+
+      let imageUri;
+      if (isFromLayout) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        imageUri = await viewShotRef.capture();
+        console.log('Layout captured:', imageUri);
+      } else if (isVideo) {
+        // For videos, use the original video URI
+        imageUri = currentMedia.uri;
+        console.log('Using video URI:', imageUri);
+      } else {
+        imageUri = currentMedia.uri;
+        console.log('Using image URI:', imageUri);
+      }
+
+      if (imageUri) {
+        console.log('Navigating to DrawingScreen with URI:', imageUri);
+        navigation.navigate('DrawingScreen', { 
+          image: imageUri,
+          mediaType: isFromLayout ? 'layout' : isVideo ? 'video' : 'image',
+          originalMedia: currentMedia,
+          layoutData: isFromLayout ? layoutData : null,
+          selectedLayoutId: isFromLayout ? selectedLayoutId : null
+        });
+      } else {
+        throw new Error('Failed to process media for drawing');
+      }
+    } catch (error) {
+      console.error('Error in handleBrushPress:', error);
+      Alert.alert(
+        'Error',
+        'Unable to process this media type for drawing. Please try again.',
+        [{ text: 'OK', onPress: () => console.log('Alert closed') }]
+      );
     }
+  };
+  const handleImageCropped = (newImage) => {
+  setCroppedImage(newImage);
+  setCurrentMedia(newImage);
   };
   const toggleRecordingMenu = () => {
     setIsRecordingMenuVisible(!isRecordingMenuVisible);
   };
   const Priview = async () => {
     try {
-      const uri = await viewShotRef.capture();
+      if (!viewShotRef) {
+        console.error('ViewShot ref is not available');
+        Alert.alert('Error', 'The preview tool is not ready yet. Please try again.');
+        return;
+      }
+
+      let previewUri;
+      if (isVideo) {
+        // For videos, use the current video URI directly
+        previewUri = currentMedia.uri;
+      } else {
+        // For images, capture the entire view as a high-quality image
+        previewUri = await viewShotRef.capture({
+          format: "jpg",
+          quality: 1,
+          result: "data-uri"
+        });
+      }
+
+      const overlayElements = (
+        <>
+          {/* Friends */}
+          {selectedFriends.map((friend) => (
+            <Animated.View key={friend.id} style={[styles.overlay, getOverlayStyle(friend)]}>
+              <Text style={styles.overlayText}>@{friend.name}</Text>
+            </Animated.View>
+          ))}
+          
+          {/* Hashtags */}
+          {selectedHashtags.map((hashtag) => (
+            <Animated.View key={hashtag.id} style={[styles.overlay, getOverlayStyle(hashtag)]}>
+              <Text style={styles.overlayText}>#{hashtag.title}</Text>
+            </Animated.View>
+          ))}
+          
+          {/* Location */}
+          {selectedLocation && (
+            <Animated.View style={[styles.overlay, getOverlayStyle(selectedLocation)]}>
+              <Text style={styles.overlayText}>{selectedLocation.placeName}</Text>
+            </Animated.View>
+          )}
+          
+          {/* Text elements */}
+          {textElements.map((text) => (
+            <Animated.View key={text.id} style={[styles.overlay, getOverlayStyle(text)]}>
+              <Text style={[styles.overlayText, text.style]}>{text.content}</Text>
+            </Animated.View>
+          ))}
+          
+          {/* Stickers */}
+          {selectedStickers.map((sticker) => (
+            <Animated.View key={sticker.id} style={[styles.stickerContainer, getOverlayStyle(sticker)]}>
+              <FastImage
+                source={{ uri: sticker.stickerURI }}
+                style={styles.sticker}
+                resizeMode={FastImage.resizeMode.contain}
+              />
+            </Animated.View>
+          ))}
+          
+          {/* PIP Image */}
+          {pipImage && (
+            <Animated.View style={[styles.pipContainer, getPipStyle()]}>
+              <Animated.Image
+                source={{ uri: pipImage.uri }}
+                style={[styles.pipImage, { opacity: pipOpacity }, pipFlipped && { transform: [{ scaleX: -1 }] }]}
+              />
+            </Animated.View>
+          )}
+        </>
+      );
+
       setIsPreviewVisible(true);
-      // Pass the captured URI to the PreviewModal
-      setPreviewImage(uri);
+      setPreviewImage(previewUri);
+      setPreviewOverlayElements(overlayElements);
     } catch (error) {
       console.error('Error capturing preview:', error);
       Alert.alert('Error', 'Failed to generate preview. Please try again.');
@@ -321,12 +409,6 @@ const handleBrushPress = async () => {
   const handleSelectMusic = (music) => {
     // Handle the selected music (e.g., set it as background music for the video)
     console.log('Selected music:', music);
-  };
-  const getSelectedImage = (layoutId, tabId) => {
-  const selectedImage = selectedLayoutImages.find(
-    image => image.layoutId === layoutId && image.tabId === tabId
-  );
-  return selectedImage ? selectedImage.image : null;
   };
   const toggleTextDropdown = () => {
     setIsTextDropdownVisible(!isTextDropdownVisible);
@@ -406,16 +488,26 @@ const handleBrushPress = async () => {
         throw new Error('No media to save');
       }
 
-      // Capture the entire view
-      const uri = await viewShotRef.capture();
-
+      let saveResult;
       const album = isDraft ? 'Drafts' : 'Camera';
-      const saveResult = await CameraRoll.save(uri, { 
-        type: isVideo ? 'video' : 'photo', 
-        album: album 
-      });
 
-      console.log('Media saved successfully:', saveResult);
+      if (isVideo) {
+        // For videos, save the original video file
+        saveResult = await CameraRoll.save(currentMedia.uri, { 
+          type: 'video', 
+          album: album 
+        });
+        console.log('Video saved successfully:', saveResult);
+      } else {
+        // For images, capture the entire view
+        const uri = await viewShotRef.capture();
+        saveResult = await CameraRoll.save(uri, { 
+          type: 'photo', 
+          album: album 
+        });
+        console.log('Image saved successfully:', saveResult);
+      }
+
       Alert.alert('Success', `Media ${isDraft ? 'drafted' : 'saved'} successfully`);
     } catch (error) {
       console.error('Error saving media:', error);
@@ -573,6 +665,11 @@ const handleBrushPress = async () => {
         setIsMoving(true);
         setMovingItem({ ...item, type: itemType });
 
+        if (itemType === 'pip') {
+          setIsPipSelected(true);  // Set PIP as selected when touched
+
+        }
+
         item.pan.setOffset({
           x: item.pan.x._value,
           y: item.pan.y._value
@@ -630,12 +727,8 @@ const handleBrushPress = async () => {
         setIsMoving(false);
         setMovingItem(null);
 
-        const shouldDelete = item.pan.x._value > wp('75%') && item.pan.y._value < hp('20%');
-        if (shouldDelete) {
-          console.log(`Item released in delete zone. Type: ${itemType}, ID: ${item.id}`);
-          handleDelete(itemType, item.id);
-        } else {
-          item.pan.flattenOffset();
+        if (itemType === 'pip') {
+          setIsPipTouched(false);
         }
         lastDistance = 0;
         lastRotation = 0;
@@ -653,7 +746,7 @@ const handleBrushPress = async () => {
   const handlePIPPress = async () => {
     try {
       const result = await CameraRoll.getPhotos({
-        first: 1000,
+        first: 35,
         assetType: 'Photos',
         include: ['filename', 'fileSize', 'location'],
       });
@@ -662,6 +755,7 @@ const handleBrushPress = async () => {
         photos: result.edges,
         onSelectImage: (selectedImage) => {
           setPipImage({
+            id: Date.now(), // Add this line to give the PIP a unique id
             uri: selectedImage.node.image.uri,
             pan: new Animated.ValueXY(),
             scale: new Animated.Value(1),
@@ -674,27 +768,26 @@ const handleBrushPress = async () => {
       Alert.alert('Error', 'Failed to access gallery. Please try again.');
     }
   };
-  
-  const handleImageCropped = (croppedImage) => {
-  setCurrentMedia(croppedImage);
-  setOriginalImage(currentMedia);
+  const MediaPreviewContent = ({ mediaUri, isVideo, overlayElements }) => {
+    return (
+      <View style={styles.mediaPreviewContainer}>
+        {isVideo ? (
+          <Video
+            source={{ uri: mediaUri }}
+            style={styles.previewVideo}
+            resizeMode="contain"
+            repeat={true}
+            controls={true}
+            paused={false} // Auto-play the video
+          />
+        ) : (
+          <Image source={{ uri: mediaUri }} style={styles.previewImage} resizeMode="contain" />
+        )}
+        {overlayElements}
+      </View>
+    );
   };
-  const handleContrastChange = (value) => {
-    setContrast(value);
-  };
-   const handleBrightnessChange = (value) => {
-    setBrightness(value);
-  };
-  const handleTemperatureChange = (value) => {
-    setTemperature(value);
-  };
-  const handleSoftnessChange = (value) => {
-  setSoftness(value);
-  };
-  const handleSharpnessChange = (value) => {
-    setSharpness(value);
-  };
-  const PreviewModal = ({ isVisible, onClose, imageUri }) => {
+  const PreviewModal = ({ isVisible, onClose, mediaUri, isVideo, overlayElements }) => {
     return (
       <Modal
         visible={isVisible}
@@ -702,56 +795,17 @@ const handleBrushPress = async () => {
         animationType="fade"
       >
         <View style={styles.previewModalContainer}>
-          <View style={styles.previewImageContainer}>
-            <Image source={{ uri: imageUri }} style={styles.previewImage} resizeMode="contain" />
-          </View>
+          <MediaPreviewContent 
+            mediaUri={mediaUri}
+            isVideo={isVideo}
+            overlayElements={overlayElements}
+          />
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Icon name="close" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
       </Modal>
     );
-  };
-  const getBrightnessOverlay = (brightness) => {
-  const alpha = brightness > 0 ? brightness : -brightness;
-  const color = brightness > 0 ? 255 : 0;
-  return `rgba(${color}, ${color}, ${color}, ${alpha})`;
-  };
-  const getTemperatureOverlay = (temperature) => {
-    const r = temperature > 0 ? 255 : 255 + temperature * 255;
-    const b = temperature < 0 ? 255 : 255 - temperature * 255;
-    return `rgba(${r}, 255, ${b}, ${Math.abs(temperature) * 0.5})`;
-  };
-  const getSoftnessOverlay = (softness) => {
-    return { filter: `blur(${softness * 5}px)` };
-  };
-  const getSharpnessOverlay = (sharpness) => {
-    return { filter: `contrast(${1 + sharpness}) brightness(${1 + sharpness * 0.5})` };
-  };
- const handleDelete = (type, id) => {
-  console.log(`Attempting to delete ${type} with id ${id}`);
-  switch(type) {
-    case 'friend':
-      setSelectedFriends(prev => prev.filter(friend => friend.id !== id));
-      break;
-    case 'hashtag':
-      setSelectedHashtags(prev => prev.filter(hashtag => hashtag.id !== id));
-      break;
-    case 'location':
-      setSelectedLocation(null);
-      break;
-    case 'text':
-      setTextElements(prev => prev.filter(text => text.id !== id));
-      break;
-    case 'sticker':
-      setSelectedStickers(prev => prev.filter(sticker => sticker.id !== id));
-      break;
-    case 'pip':
-      setPipImage(null);
-      break;
-    default:
-      console.warn(`Unknown item type: ${type}`);
-  }
   };
   const handleEditText = (id, newContent) => {
     setTextElements(prevElements =>
@@ -760,9 +814,6 @@ const handleBrushPress = async () => {
       )
     );
     setEditingTextId(id);
-  };
-  const getContrastFilter = (contrast) => {
-    return `rgba(128, 128, 128, ${Math.abs(contrast - 1)})`;
   };
   const handleColorSelect = () => {
     setIsColorPickerVisible(true);
@@ -779,28 +830,113 @@ const handleBrushPress = async () => {
       );
     }
   };
+  const getOverlayStyle = (item) => ({
+  transform: [
+    { translateX: item.pan.x },
+    { translateY: item.pan.y },
+    { scale: item.scale },
+    { rotate: item.rotate.interpolate({
+      inputRange: [0, 360],
+      outputRange: ['0deg', '360deg']
+    })},
+  ]
+  });
+  const adjustSaturation = (s) => {
+    const adjustedS = 1 + (s - 1) * 0.5;
+    return [
+      0.299 + 0.701 * adjustedS, 0.587 - 0.587 * adjustedS, 0.114 - 0.114 * adjustedS, 0, 0,
+      0.299 - 0.299 * adjustedS, 0.587 + 0.413 * adjustedS, 0.114 - 0.114 * adjustedS, 0, 0,
+      0.299 - 0.299 * adjustedS, 0.587 - 0.587 * adjustedS, 0.114 + 0.886 * adjustedS, 0, 0,
+      0, 0, 0, 1, 0,
+    ];
+  };
+  const adjustContrast = (c) => {
+    const adjustedC = 1 + (c - 1) * 0.5;
+    return [
+      adjustedC, 0, 0, 0, 128 * (1 - adjustedC),
+      0, adjustedC, 0, 0, 128 * (1 - adjustedC),
+      0, 0, adjustedC, 0, 128 * (1 - adjustedC),
+      0, 0, 0, 1, 0,
+    ];
+  };
+  const adjustBrightness = (b) => {
+    const adjustedB = 1 + (b - 1) * 0.2;
+    return [
+      adjustedB, 0, 0, 0, 0,
+      0, adjustedB, 0, 0, 0,
+      0, 0, adjustedB, 0, 0,
+      0, 0, 0, 1, 0,
+    ];
+  };
+  const adjustTemperature = (t) => {
+    const adjustedT = t * 0.5;
+    return [
+      1 + adjustedT, 0, 0, 0, 0,
+      0, 1, 0, 0, 0,
+      0, 0, 1 - adjustedT, 0, 0,
+      0, 0, 0, 1, 0,
+    ];
+  };
+  const adjustSoftness = (s) => {
+    const softnessFactor = s * 0.25;
+    return [
+      1 - softnessFactor, softnessFactor, 0, 0, 0,
+      softnessFactor, 1 - softnessFactor, 0, 0, 0,
+      0, 0, 1, 0, 0,
+      0, 0, 0, 1, 0,
+    ];
+  };
+  const adjustSharpness = (s) => {
+    const sharpnessFactor = s * 0.125;
+    return [
+      1 + sharpnessFactor, -sharpnessFactor, -sharpnessFactor, 0, 0,
+      -sharpnessFactor, 1 + sharpnessFactor, -sharpnessFactor, 0, 0,
+      -sharpnessFactor, -sharpnessFactor, 1 + sharpnessFactor, 0, 0,
+      0, 0, 0, 1, 0,
+    ];
+  };
+  const getPipStyle = () => ({
+    transform: [
+      { translateX: pipImage.pan.x },
+      { translateY: pipImage.pan.y },
+      { scale: pipImage.scale },
+      { rotate: `${pipRotation}deg` },
+    ],
+    backgroundColor: pipBackgroundColor,
+    width: pipSize,
+    height: pipSize,
+  });
 return (
-  <SafeAreaView style={styles.container}>
-   
-    <TopBar
-      currentMedia={currentMedia}
+    <TouchableWithoutFeedback onPress={() => setIsPipSelected(false)}>
+<SafeAreaView 
+ style={styles.container} 
+>
+ <TopBar
+      currentMedia={croppedImage || currentMedia}
       onPIPPress={handlePIPPress}
       onSelectFilter={handleSelectFilter}
       selectedFilter={selectedFilter}
       isVideo={isVideo}
-      onImageCropped={handleImageCropped}
       onStickerPress={handleStickerPress}
+      saturationValue={saturation}
+      onSaturationChange={(value) => {setSaturation(value); setAdjustmentsChanged(true);}}
       contrastValue={contrast}
-      onContrastChange={handleContrastChange}
+      onContrastChange={(value) => {setContrast(value); setAdjustmentsChanged(true);
+      }}
       brightnessValue={brightness}
-      onBrightnessChange={handleBrightnessChange}
+      onBrightnessChange={(value) => {setBrightness(value);  setAdjustmentsChanged(true);
+      }}
       temperatureValue={temperature}
-      onTemperatureChange={handleTemperatureChange}
+      onTemperatureChange={(value) => {setTemperature(value);setAdjustmentsChanged(true);
+      }}
       softnessValue={softness}
-      onSoftnessChange={handleSoftnessChange}
+      onSoftnessChange={(value) => {setSoftness(value); setAdjustmentsChanged(true);
+      }}
       sharpnessValue={sharpness}
-      onSharpnessChange={handleSharpnessChange}
-     onTextStyle={handleTextStyle}
+      onSharpnessChange={(value) => { setSharpness(value); setAdjustmentsChanged(true);
+      }}
+      onImageCropped={handleImageCropped}
+      onTextStyle={handleTextStyle}
     />
     <View style={styles.topBar}>
         <TouchableOpacity onPress={handleBackPress}>
@@ -819,70 +955,63 @@ return (
             color="#000"
           />
         </TouchableOpacity>
-      </View>
-        <View style={styles.leftIconsContainer}>
-  <TouchableOpacity style={styles.icon} onPress={handleFriendsPress}>
-    <Icon4 name="email" size={18} color="#000" />
-  </TouchableOpacity>
-  <TouchableOpacity style={styles.icon} onPress={handleLocationPress}>
-    <Icon name="location" size={18} color="#000" />
-  </TouchableOpacity>
-  <TouchableOpacity style={styles.icon} onPress={Priview}>
-    <Icon name="eye" size={18} color="#000" />
-  </TouchableOpacity>
-  <TouchableOpacity style={styles.icon} onPress={handleHashtagPress}>
-    <Icon1 name="hashtag" size={18} color="#000" />
-  </TouchableOpacity>
-        </View>
-       <View style={styles.rightIconsContainer}>
-  <TouchableOpacity style={styles.icon} onPress={handleBrushPress}>
-    <Icon name="brush" size={18} color="#000" />
-  </TouchableOpacity>
-  <TouchableOpacity style={styles.icon} onPress={toggleRecordingMenu}>
-    <Icon name="mic" size={18} color="#000" />
-  </TouchableOpacity>
- <TouchableOpacity style={styles.icon} onPress={toggleTextDropdown}>
-  <Icon name="text" size={18} color="#000" />
-</TouchableOpacity>
-  {isVideo && (
-    <TouchableOpacity onPress={handleSpeedChange} style={styles.icon}>
-      <Text style={styles.speedText}>{playbackSpeed}x</Text>
-    </TouchableOpacity>
-  )}
-        </View>
-     
-<ViewShot 
-  ref={ref => setViewShotRef(ref)} 
-  options={{ format: "jpg", quality: 1 }}
-  style={styles.viewShot}
->
-    <View style={styles.mediaContainer} pointerEvents="box-none">
-      
-            {currentMedia && (
+    </View>
+    <View style={styles.leftIconsContainer}>
+        <TouchableOpacity style={styles.icon} onPress={handleFriendsPress}>
+          <Icon4 name="email" size={18} color="#000" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.icon} onPress={handleLocationPress}>
+          <Icon name="location" size={18} color="#000" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.icon} onPress={Priview}>
+          <Icon name="eye" size={18} color="#000" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.icon} onPress={handleHashtagPress}>
+          <Icon1 name="hashtag" size={18} color="#000" />
+        </TouchableOpacity>
+    </View>
+    <View style={styles.rightIconsContainer}>
+        <TouchableOpacity style={styles.icon} onPress={handleBrushPress}>
+          <Icon name="brush" size={18} color="#000" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.icon} onPress={toggleRecordingMenu}>
+          <Icon name="mic" size={18} color="#000" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.icon} onPress={toggleTextDropdown}>
+          <Icon name="text" size={18} color="#000" />
+        </TouchableOpacity>
+        {isVideo && (
+          <TouchableOpacity onPress={handleSpeedChange} style={styles.icon}>
+            <Text style={styles.speedText}>{playbackSpeed}x</Text>
+          </TouchableOpacity>
+        )}
+    </View> 
+    <ViewShot 
+        ref={ref => setViewShotRef(ref)} 
+        options={{ format: "png", quality: 1, result: "data-uri" }}
+        style={styles.viewShot}
+      >
+        <View style={styles.mediaContainer} pointerEvents="box-none">
+          
+        {currentMedia && (
           <View style={styles.mediaWrapper}>
             {isFromLayout ? (
-              <LayoutView
-                layoutData={layoutData}
-                selectedLayoutId={selectedLayoutId}
-                getSelectedImage={(layoutId, tabId) => {
-                  const layout = layoutData.find(item => item.id === layoutId);
-                  if (layout) {
-                    const image = layout.images.find(img => img.id === tabId);
-                    return image ? image.image : null;
-                  }
-                  return null;
-                }}
-              />
+              <SelectedFilterComponent>
+                <LayoutView
+                  layoutData={layoutData}
+                  selectedLayoutId={selectedLayoutId}
+                  getSelectedImage={(layoutId, tabId) => {
+                    const layout = layoutData.find(item => item.id === layoutId);
+                    if (layout) {
+                      const image = layout.images.find(img => img.id === tabId);
+                      return image ? image.image : null;
+                    }
+                    return null;
+                  }}
+                />
+              </SelectedFilterComponent>
             ) : isVideo ? (
-              <View style={[styles.videoContainer, getSoftnessOverlay(softness), getSharpnessOverlay(sharpness)]}>
-                <View style={[
-                  styles.temperatureOverlay,
-                  { backgroundColor: getTemperatureOverlay(temperature) }
-                ]} />
-                <View style={[
-                  styles.brightnessOverlay,
-                  { backgroundColor: getBrightnessOverlay(brightness) }
-                ]} />
+              <View style={[styles.videoContainer]}>
                 <Video
                   ref={videoRef}
                   source={{ uri: currentMedia.uri }}
@@ -894,112 +1023,136 @@ return (
                 />
               </View>
             ) : (
-              <View style={[styles.imageContainer, getSoftnessOverlay(softness), getSharpnessOverlay(sharpness), { filter: getContrastFilter(contrast) }]}>
-                {SelectedFilterComponent ? (
-                  <SelectedFilterComponent
-                    image={
+              <View style={[styles.imageContainer]}>
+                {adjustmentsChanged ? (
+                  <ColorMatrix
+                    matrix={concatColorMatrices(
+                      adjustSaturation(saturation),
+                      adjustContrast(contrast),
+                      adjustBrightness(brightness),
+                      adjustTemperature(temperature),
+                      adjustSoftness(softness),
+                      adjustSharpness(sharpness)
+                    )}
+                  >
+                    {SelectedFilterComponent ? (
+                      <SelectedFilterComponent
+                        image={
+                          <Image
+                            source={{ uri: croppedImage ? croppedImage.uri : currentMedia.uri, cache: 'force-cache' }}
+                            style={[styles.media]}
+                            resizeMode="contain"
+                          />
+                        }
+                      />
+                    ) : (
                       <Image
-                        source={{ uri: currentMedia.uri, cache: 'force-cache' }}
+                        source={{ uri: croppedImage ? croppedImage.uri : currentMedia.uri, cache: 'force-cache' }}
                         style={[styles.media]}
                         resizeMode="contain"
                       />
-                    }
-                  />
+                    )}
+                  </ColorMatrix>
                 ) : (
-                  <Image
-                    source={{ uri: currentMedia.uri, cache: 'force-cache' }}
-                    style={[styles.media]}
-                    resizeMode="contain"
-                  />
+                  SelectedFilterComponent ? (
+                    <SelectedFilterComponent
+                      image={
+                        <Image
+                          source={{ uri: croppedImage ? croppedImage.uri : currentMedia.uri, cache: 'force-cache' }}
+                          style={[styles.media]}
+                          resizeMode="contain"
+                        />
+                      }
+                    />
+                  ) : (
+                    <Image
+                      source={{ uri: croppedImage ? croppedImage.uri : currentMedia.uri, cache: 'force-cache' }}
+                      style={[styles.media]}
+                      resizeMode="contain"
+                    />
+                  )
                 )}
               </View>
             )}
           </View>
         )}
-        <View style={[styles.contrastOverlay, { opacity: contrast - 1 }]} />
-        <View style={[
-          styles.temperatureOverlay,
-          { backgroundColor: getTemperatureOverlay(temperature) }
-        ]} />
-        <View style={[
-          styles.brightnessOverlay,
-          { backgroundColor: getBrightnessOverlay(brightness) }
-        ]} />   
-
-      {selectedFriends.map((friend) => {
-        const panResponder = createPanResponder(friend, 'friend');
-        return (
-          <Animated.View
-            key={friend.id}
-            style={[
-              styles.overlay,
-              {
-                transform: [
-                  { translateX: friend.pan.x },
-                  { translateY: friend.pan.y },
-                  { scale: friend.scale },
-                  { rotate: friend.rotate.interpolate({
-                    inputRange: [0, 360],
-                    outputRange: ['0deg', '360deg']
-                  })},
-                ],
-                  zIndex: 10, 
-              }
-            ]}
-            {...panResponder.panHandlers}
-          >
-            <Text style={styles.overlayText}>@{friend.name}</Text>
-          </Animated.View>
-        );
-      })}
-      {selectedHashtags.map((hashtag) => {
-        const panResponder = createPanResponder(hashtag, 'hashtag');
-        return (
-          <Animated.View
-            key={hashtag.id}
-            style={[
-              styles.overlay,
-              {
-                transform: [
-                  { translateX: hashtag.pan.x },
-                  { translateY: hashtag.pan.y },
-                  { scale: hashtag.scale },
-                  { rotate: hashtag.rotate.interpolate({
-                    inputRange: [0, 360],
-                    outputRange: ['0deg', '360deg']
-                  })},
-                ]
-              }
-            ]}
-            {...panResponder.panHandlers}
-          >
-            <Text style={styles.overlayText}>#{hashtag.title}</Text>
-          </Animated.View>
-        );
-      })}
-      {selectedLocation && (
-        <Animated.View
-          style={[
-            styles.overlay,
-            {
-              transform: [
-                { translateX: selectedLocation.pan.x },
-                { translateY: selectedLocation.pan.y },
-                { scale: selectedLocation.scale },
-                { rotate: selectedLocation.rotate.interpolate({
-                  inputRange: [0, 360],
-                  outputRange: ['0deg', '360deg']
-                })},
-              ]
-            }
-          ]}
-          {...createPanResponder(selectedLocation, 'location').panHandlers}
-        >
-          <Text style={styles.overlayText}>{selectedLocation.placeName}</Text>
-        </Animated.View>
-      )}
-     
-     {pipImage && (
+          {selectedFriends.map((friend) => {
+            const panResponder = createPanResponder(friend, 'friend');
+            return (
+              <Animated.View
+                key={friend.id}
+                style={[
+                  styles.overlay,
+                  {
+                    transform: [
+                      { translateX: friend.pan.x },
+                      { translateY: friend.pan.y },
+                      { scale: friend.scale },
+                      { rotate: friend.rotate.interpolate({
+                        inputRange: [0, 360],
+                        outputRange: ['0deg', '360deg']
+                      })},
+                    ],
+                      zIndex: 10, 
+                  }
+                ]}
+                {...panResponder.panHandlers}
+              >
+                <Text style={styles.overlayText}>@{friend.name}</Text>
+              </Animated.View>
+            );
+          })}
+          {selectedHashtags.map((hashtag) => {
+            const panResponder = createPanResponder(hashtag, 'hashtag');
+            return (
+              <Animated.View
+                key={hashtag.id}
+                style={[
+                  styles.overlay,
+                  {
+                    transform: [
+                      { translateX: hashtag.pan.x },
+                      { translateY: hashtag.pan.y },
+                      { scale: hashtag.scale },
+                      { rotate: hashtag.rotate.interpolate({
+                        inputRange: [0, 360],
+                        outputRange: ['0deg', '360deg']
+                      })},
+                    ]
+                  }
+                ]}
+                {...panResponder.panHandlers}
+              >
+                <Text style={styles.overlayText}>#{hashtag.title}</Text>
+              </Animated.View>
+            );
+          })}
+          {selectedLocation && (
+                      <Animated.View
+                        style={[
+                          styles.overlay,
+                          styles.locationOverlay,
+                          {
+                            transform: [
+                              { translateX: selectedLocation.pan.x },
+                              { translateY: selectedLocation.pan.y },
+                              { scale: selectedLocation.scale },
+                              { rotate: selectedLocation.rotate.interpolate({
+                                inputRange: [0, 360],
+                                outputRange: ['0deg', '360deg']
+                              })},
+                            ]
+                          }
+                        ]}
+                        {...createPanResponder(selectedLocation, 'location').panHandlers}
+                      >
+                        <View style={styles.locationContent}>
+                          <Icon name="location" size={16} color="#000" style={styles.locationIcon} />
+                          <Text style={styles.locationText}>{selectedLocation.placeName}</Text>
+                        </View>
+                      </Animated.View>
+          )}      
+{pipImage && (
   <Animated.View
     style={[
       styles.pipContainer,
@@ -1010,103 +1163,138 @@ return (
           { scale: pipImage.scale },
           { rotate: `${pipRotation}deg` },
         ],
-        backgroundColor: pipBackgroundColor,
         width: pipSize,
         height: pipSize,
+        borderWidth: isPipSelected ? 2 : 0,
+        borderColor: isPipSelected ? 'white' : 'transparent',
       }
     ]}
     {...createPanResponder(pipImage, 'pip').panHandlers}
   >
-    <Animated.Image
-      source={{ uri: pipImage.uri }}
-      style={[
-        styles.pipImage,
-        { opacity: pipOpacity },
-        pipFlipped && { transform: [{ scaleX: -1 }] }
-      ]}
-    />
-    <TouchableOpacity style={[styles.pipIcon, styles.pipDeleteIcon]} onPress={() => setPipImage(null)}>
-      <Icon name="close" size={20} color="white" />
-    </TouchableOpacity>
-    <TouchableOpacity style={[styles.pipIcon, styles.pipFlipIcon]} onPress={() => setPipFlipped(!pipFlipped)}>
-      <Icon2 name="flip-horizontal" size={20} color="white" />
-    </TouchableOpacity>
-    <TouchableOpacity style={[styles.pipIcon, styles.pipMenuIcon]} onPress={handlePipMenuPress}>
-      <Icon name="pencil" size={20} color="white" />
-    </TouchableOpacity>
-    <TouchableOpacity style={[styles.pipIcon, styles.pipZoomIcon]} onPress={handlePipZoomPress}>
-      <Icon2 name="arrow-expand" size={20} color="white" />
-    </TouchableOpacity>
+    <TouchableWithoutFeedback onPress={(event) => {
+      event.stopPropagation();
+      setIsPipSelected(true);
+    }}>
+      <Animated.Image
+        source={{ uri: pipImage.uri }}
+        style={[
+          styles.pipImage,
+          { opacity: pipOpacity },
+          pipFlipped && { transform: [{ scaleX: -1 }] }
+        ]}
+        resizeMode="contain"
+      />
+    </TouchableWithoutFeedback>
+    {isPipSelected && (
+      <>
+        <TouchableOpacity 
+          style={[styles.pipIcon, styles.pipDeleteIcon]} 
+          onPress={(event) => {
+            event.stopPropagation();
+            setPipImage(null);
+          }}
+        >
+          <Icon name="close" size={20} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.pipIcon, styles.pipFlipIcon]} 
+          onPress={(event) => {
+            event.stopPropagation();
+            setPipFlipped(!pipFlipped);
+          }}
+        >
+          <Icon2 name="flip-horizontal" size={20} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.pipIcon, styles.pipMenuIcon]} 
+          onPress={(event) => {
+            event.stopPropagation();
+            handlePipMenuPress();
+          }}
+        >
+          <Icon name="pencil" size={20} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.pipIcon, styles.pipZoomIcon]} 
+          onPress={(event) => {
+            event.stopPropagation();
+            handlePipZoomPress();
+          }}
+        >
+          <Icon2 name="arrow-expand" size={20} color="white" />
+        </TouchableOpacity>
+      </>
+    )}
   </Animated.View>
 )}
-    {textElements.map((text) => {
-      const panResponder = createPanResponder(text, 'text');
-      const isEditing = editingTextId === text.id;
-      return (
-        <Animated.View
-          key={text.id}
-          style={[
-            styles.overlay,
-            isEditing && styles.editingOverlay,
-            {
-              transform: [
-                { translateX: text.pan.x },
-                { translateY: text.pan.y },
-                { scale: text.scale },
-                { rotate: text.rotate.interpolate({
-                  inputRange: [0, 360],
-                  outputRange: ['0deg', '360deg']
-                })},
-              ]
-            }
-          ]}
-          {...panResponder.panHandlers}
-        >
-          <TextInput
-            style={[styles.overlayText, text.style]}
-            value={text.content}
-            onChangeText={(newContent) => handleEditText(text.id, newContent)}
-            onFocus={() => {
-              setSelectedTextId(text.id);
-              setEditingTextId(text.id);
-            }}
-            onBlur={() => setEditingTextId(null)}
-          />
-        </Animated.View>
-      );
-    })}
-      {selectedStickers.map((sticker) => {
-        const panResponder = createPanResponder(sticker, 'sticker');
-        return (
-          <Animated.View
-            key={sticker.id}
-            style={[
-              styles.stickerContainer,
-              {
-                transform: [
-                  { translateX: sticker.pan.x },
-                  { translateY: sticker.pan.y },
-                  { scale: sticker.scale },
-                  { rotate: sticker.rotate.interpolate({
-                    inputRange: [0, 360],
-                    outputRange: ['0deg', '360deg']
-                  })},
-                ]
-              }
-            ]}
-            {...panResponder.panHandlers}
-          >
-            <FastImage
-              source={{ uri: sticker.stickerURI }}
-              style={styles.sticker}
-              resizeMode={FastImage.resizeMode.contain}
-            />
-          </Animated.View>
-        );
-      })}
-   
-    </View>
- </ViewShot>
+          {textElements.map((text) => {
+              const panResponder = createPanResponder(text, 'text');
+              const isEditing = editingTextId === text.id;
+              return (
+                <Animated.View
+                  key={text.id}
+                  style={[
+                    styles.overlay,
+                    isEditing && styles.editingOverlay,
+                    {
+                      transform: [
+                        { translateX: text.pan.x },
+                        { translateY: text.pan.y },
+                        { scale: text.scale },
+                        { rotate: text.rotate.interpolate({
+                          inputRange: [0, 360],
+                          outputRange: ['0deg', '360deg']
+                        })},
+                      ]
+                    }
+                  ]}
+                  {...panResponder.panHandlers}
+                >
+                  <TextInput
+                    style={[styles.overlayText, text.style]}
+                    value={text.content}
+                    onChangeText={(newContent) => handleEditText(text.id, newContent)}
+                    onFocus={() => {
+                      setSelectedTextId(text.id);
+                      setEditingTextId(text.id);
+                    }}
+                    onBlur={() => setEditingTextId(null)}
+                  />
+                </Animated.View>
+              );
+            })}
+          {selectedStickers.map((sticker) => {
+            const panResponder = createPanResponder(sticker, 'sticker');
+            return (
+              <Animated.View
+                key={sticker.id}
+                style={[
+                  styles.stickerContainer,
+                  {
+                    transform: [
+                      { translateX: sticker.pan.x },
+                      { translateY: sticker.pan.y },
+                      { scale: sticker.scale },
+                      { rotate: sticker.rotate.interpolate({
+                        inputRange: [0, 360],
+                        outputRange: ['0deg', '360deg']
+                      })},
+                    ]
+                  }
+                ]}
+                {...panResponder.panHandlers}
+              >
+                <FastImage
+                  source={{ uri: sticker.stickerURI }}
+                  style={styles.sticker}
+                  resizeMode={FastImage.resizeMode.contain}
+                />
+              </Animated.View>
+            );
+          })}
+      
+        </View>
+    </ViewShot>
     <Modal
       visible={isFriendsListVisible}
       transparent={true}
@@ -1180,7 +1368,21 @@ return (
 />
         </View>
     </Modal>
-    
+    <Modal visible={isColorPickerVisible} transparent={true}>
+  <View style={styles.colorPickerContainer}>
+    <ColorPicker
+      onColorChange={handleColorChange}
+      style={{flex: 1}}
+      color={selectedColor}
+    />
+    <TouchableOpacity 
+      style={styles.colorPickerDoneButton} 
+      onPress={() => setIsColorPickerVisible(false)}
+    >
+      <Text style={styles.colorPickerDoneButtonText}>Done</Text>
+    </TouchableOpacity>
+  </View>
+    </Modal>
     {isStickerBarVisible && (
       <View style={styles.stickerBar}>
         {isLoadingStickers ? (
@@ -1211,7 +1413,6 @@ return (
         )}
       </View>
     )}
- 
     {isDropdownVisible && (
         <View style={styles.dropdown}>
           <TouchableOpacity style={styles.dropdownItem} onPress={handleSave}>
@@ -1221,39 +1422,25 @@ return (
             <Text>Draft</Text>
           </TouchableOpacity>
         </View>
-      )}
-<Modal visible={isColorPickerVisible} transparent={true}>
-  <View style={styles.colorPickerContainer}>
-    <ColorPicker
-      onColorChange={handleColorChange}
-      style={{flex: 1}}
-      color={selectedColor}
+    )}
+    {isTextDropdownVisible && (
+    <TextDropdown 
+      onTextStyle={handleTextStyle}
+      onColorSelect={handleColorSelect}
     />
-    <TouchableOpacity 
-      style={styles.colorPickerDoneButton} 
-      onPress={() => setIsColorPickerVisible(false)}
-    >
-      <Text style={styles.colorPickerDoneButtonText}>Done</Text>
-    </TouchableOpacity>
-  </View>
-</Modal>
-    
-  {isTextDropdownVisible && (
-  <TextDropdown 
-    onTextStyle={handleTextStyle}
-    onColorSelect={handleColorSelect}
-  />
-)}
-      {isRecordingMenuVisible && (
-        <RecordingMenu onClose={toggleRecordingMenu} />
-      )}
-    
-<PreviewModal
-  isVisible={isPreviewVisible}
-  onClose={() => setIsPreviewVisible(false)}
-  imageUri={previewImage}
-/>
+    )}
+    {isRecordingMenuVisible && (
+       <RecordingMenu onClose={toggleRecordingMenu} />
+    )}
+    <PreviewModal
+      isVisible={isPreviewVisible}
+      onClose={() => setIsPreviewVisible(false)}
+      mediaUri={previewImage}
+      isVideo={isVideo}
+      overlayElements={previewOverlayElements}
+    />
   </SafeAreaView>
+  </TouchableWithoutFeedback>
 );
 };
 const styles = StyleSheet.create({
@@ -1268,16 +1455,35 @@ const styles = StyleSheet.create({
   },
   mediaContainer: {
     width: wp('100%'),
-    height: hp('93%'),
+    height: hp('92%'),
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
     zIndex:2,
     top:hp('-2%')
   },
+  locationOverlay: {
+    backgroundColor: 'white', // Semi-transparent black background
+    borderRadius: 8,
+    padding: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  locationContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  locationIcon: {
+    marginRight: 4,
+  },
+  locationText: {
+    color: '#000', // White text for better contrast
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
   media: {
     width: wp('100%'),    
-    height: hp('93%'),
+    height: hp('80%'),
     zIndex:2
   },
  overlay: {
@@ -1304,7 +1510,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderWidth: 2,
     borderColor: 'white',
-   
     padding: 10,
     zIndex: 2,
   },
@@ -1342,7 +1547,7 @@ const styles = StyleSheet.create({
   pipZoomIcon: {
   bottom: -15,
   right: -15,
-},
+  },
   pipMenuContainer: {
     position: 'absolute',
     bottom: 0,
@@ -1390,7 +1595,6 @@ const styles = StyleSheet.create({
     height: wp('20%'),
     resizeMode: 'contain',
   },
-
   stickerBar: {
     position: 'absolute',
     bottom: hp('15%'),
@@ -1400,8 +1604,7 @@ const styles = StyleSheet.create({
     paddingVertical: hp('1%'),
     borderTopWidth: 1,
     borderTopColor: '#eee',
-      zIndex: 2,
-
+    zIndex: 2,
   },
   colorPickerContainer: {
   flex: 1,
@@ -1428,11 +1631,11 @@ const styles = StyleSheet.create({
   justifyContent: 'center',
   alignItems: 'center',
   zIndex: 1,
-},
-deleteText: {
-  color: 'white',
-  marginTop: 10,
-},
+  },
+  deleteText: {
+    color: 'white',
+    marginTop: 10,
+  },
  topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1487,7 +1690,7 @@ deleteText: {
   icon: {
     marginVertical: hp('1%'),
     padding: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    backgroundColor: '#4CBB17',
     borderRadius: 30,
   },
   speedText: {
@@ -1523,35 +1726,38 @@ deleteText: {
     color: '#fff',
     fontWeight: '500',
   },
-  previewModalContainer: {
-  flex: 1,
-  justifyContent: 'center',
-  alignItems: 'center',
-  backgroundColor: 'rgba(0, 0, 0, 0.8)',
-},
-previewImageContainer: {
-  width: wp('80%'),
-  height: wp('80%'),
-  backgroundColor: '#fff',
-  borderRadius: 10,
-  overflow: 'hidden',
-},
-previewImage: {
-  width: '100%',
-  height: '100%',
-},
-closeButton: {
-  position: 'absolute',
-  top: hp('5%'),
-  right: wp('5%'),
-  padding: 10,
-},
-doneButton: {
-    backgroundColor: '#4CAF50',
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 10,
+previewModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
     alignItems: 'center',
+  },
+  mediaPreviewContainer: {
+    width: '100%',
+    height: '80%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  previewVideo: {
+    width: '100%',
+    height: '100%',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    padding: 10,
+  },
+  doneButton: {
+      backgroundColor: '#4CAF50',
+      padding: 10,
+      borderRadius: 5,
+      marginTop: 10,
+      alignItems: 'center',
   },
   doneButtonText: {
     color: '#fff',

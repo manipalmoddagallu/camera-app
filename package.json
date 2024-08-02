@@ -47,6 +47,7 @@
     "react-native-image-crop-tools": "^1.6.4",
     "react-native-image-editor": "^0.0.1",
     "react-native-image-filter-kit": "^0.8.0",
+    "react-native-image-picker": "^7.1.2",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-material-menu": "^2.0.0",
     "react-native-modal": "^13.0.1",

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, FlatList, Image, Modal } from 'react-native';
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
-import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   widthPercentageToDP as wp,
@@ -9,10 +8,10 @@ import {
 } from 'react-native-responsive-screen';
 
 const GalleryMenu = ({ isVisible, onClose, onImageSelect }) => {
-  const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState('gallery');
   const [galleryImages, setGalleryImages] = useState([]);
   const [draftedMedia, setDraftedMedia] = useState([]);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     if (isVisible) {
@@ -47,45 +46,72 @@ const GalleryMenu = ({ isVisible, onClose, onImageSelect }) => {
     }
   };
 
-const handleImageSelect = (image, isDraft = false) => {
-  if (isDraft) {
-    onImageSelect(image.editedImageUri || image.uri, image);
-  } else {
-    onImageSelect(image.node.image.uri, null);
-  }
-  onClose();
-};
+    const handleImageSelect = (image, isDraft = false) => {
+    let selectedImageUri;
+    if (isDraft) {
+      selectedImageUri = image.editedImageUri || image.uri;
+    } else {
+      selectedImageUri = image.node.image.uri;
+    }
+    setSelectedImage(selectedImageUri);
+    console.log('Selected image:', selectedImageUri);
+  };
+
+  const handleDone = () => {
+    if (selectedImage) {
+      const selectedItem = activeTab === 'draft' 
+        ? draftedMedia.find(item => (item.editedImageUri || item.uri) === selectedImage)
+        : galleryImages.find(item => item.node.image.uri === selectedImage);
+      onImageSelect(selectedImage, selectedItem);
+      onClose();
+    }
+  };
+
   const renderGalleryItem = ({ item }) => (
     <TouchableOpacity onPress={() => handleImageSelect(item)}>
-      <Image
-        source={{ uri: item.node.image.uri }}
-        style={{ width: wp('30%'), height: wp('30%'), margin: 2 }}
-      />
+      <View style={styles.imageContainer}>
+        <Image
+          source={{ uri: item.node.image.uri }}
+          style={styles.image}
+        />
+        {selectedImage === item.node.image.uri && (
+          <View style={styles.selectedMark}>
+            <View style={styles.checkmark} />
+          </View>
+        )}
+      </View>
     </TouchableOpacity>
   );
 
- const renderDraftItem = ({ item }) => (
-  <TouchableOpacity onPress={() => handleImageSelect(item, true)}>
-    <Image
-      source={{ uri: item.editedImageUri || item.uri }}
-      style={{ width: wp('30%'), height: wp('30%'), margin: 2 }}
-    />
-  </TouchableOpacity>
-);
+  const renderDraftItem = ({ item }) => (
+    <TouchableOpacity onPress={() => handleImageSelect(item, true)}>
+      <View style={styles.imageContainer}>
+        <Image
+          source={{ uri: item.editedImageUri || item.uri }}
+          style={styles.image}
+        />
+        {selectedImage === (item.editedImageUri || item.uri) && (
+          <View style={styles.selectedMark}>
+            <View style={styles.checkmark} />
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
 
   const renderContent = () => {
     return activeTab === 'gallery' ? (
       <FlatList
         data={galleryImages}
         renderItem={renderGalleryItem}
-        keyExtractor={(item, index) => index.toString()}
+        keyExtractor={(item) => item.node.image.uri}
         numColumns={3}
       />
     ) : (
       <FlatList
         data={draftedMedia}
         renderItem={renderDraftItem}
-        keyExtractor={(item, index) => index.toString()}
+        keyExtractor={(item) => item.editedImageUri || item.uri}
         numColumns={3}
       />
     );
@@ -115,14 +141,20 @@ const handleImageSelect = (image, isDraft = false) => {
             </TouchableOpacity>
           </View>
           {renderContent()}
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text>Close</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <Text>Close</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.doneButton, !selectedImage && styles.disabledButton]} onPress={handleDone} disabled={!selectedImage}>
+              <Text style={styles.doneButtonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -146,16 +178,66 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
+    color: "#000"
   },
   activeTab: {
     borderBottomColor: 'blue',
   },
-  closeButton: {
+  imageContainer: {
+    position: 'relative',
+    width: wp('30%'),
+    height: wp('30%'),
+    margin: 2,
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  selectedMark: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    backgroundColor: 'blue',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkmark: {
+    width: 12,
+    height: 6,
+    borderLeftWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: 'white',
+    transform: [{ rotate: '-45deg' }],
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginTop: 20,
+  },
+  closeButton: {
     padding: 10,
     backgroundColor: 'lightgray',
     alignItems: 'center',
     borderRadius: 5,
+    flex: 1,
+    marginRight: 10,
+  },
+  doneButton: {
+    padding: 10,
+    backgroundColor: 'blue',
+    alignItems: 'center',
+    borderRadius: 5,
+    flex: 1,
+    marginLeft: 10,
+  },
+  disabledButton: {
+    backgroundColor: 'gray',
+  },
+  doneButtonText: {
+    color: 'white',
   },
 });
 

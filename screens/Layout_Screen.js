@@ -12,69 +12,29 @@ import {
 } from 'react-native';
 import { FILTERS } from './utils/Filters';
 import { images } from './assets/images/image';
-import { useFocusEffect } from '@react-navigation/native';
-import { CameraRoll } from '@react-native-camera-roll/camera-roll';
-
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from 'react-native-responsive-screen';
 import Config, { FONT, COLOR, FONT_SIZE } from './utils/Config';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 
 const Layout_Screen = ({ route }) => {
-  const { selectedImage } = route.params;
+  const { selectedImage } = route.params || {};
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
 
   const [imageUri, setImageUri] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const extractedUri = useRef(null);
 
   useEffect(() => {
-    console.log('Received selectedImage in Layout_Screen:', selectedImage);
-    if (selectedImage) {
-      handleImageUri(selectedImage);
-    }
-  }, [selectedImage]);
-
-  const handleImageUri = async (uri) => {
-    if (Platform.OS === 'android' && uri.startsWith('content://')) {
-      try {
-        const asset = await CameraRoll.getPhotos({
-          first: 1,
-          assetType: 'Photos',
-          groupTypes: 'All',
-          include: ['imageSize', 'filename'],
-          mimeTypes: ['image/jpeg', 'image/png'],
-          contentUri: uri,
-        });
-        
-        if (asset.edges && asset.edges.length > 0) {
-          const resolvedUri = asset.edges[0].node.image.uri;
-          console.log('Resolved URI:', resolvedUri);
-          setImageUri(resolvedUri);
-          extractedUri.current = resolvedUri;
-        } else {
-          console.error('Failed to resolve content URI:', uri);
-        }
-      } catch (error) {
-        console.error('Error resolving content URI:', error);
-      }
-    } else {
-      setImageUri(uri);
-      extractedUri.current = uri;
-    }
-  };
-
-  useFocusEffect(
-    React.useCallback(() => {
-      const { selectedImage } = route.params || {};
+    if (isFocused && selectedImage) {
       console.log('Received selectedImage in Layout_Screen:', selectedImage);
-      if (selectedImage) {
-        handleImageUri(selectedImage);
-      }
-    }, [route.params])
-  );
+      setImageUri(selectedImage);
+      extractedUri.current = selectedImage;
+    }
+  }, [isFocused, selectedImage]);
 
   const onExtractImage = ({ nativeEvent }) => {
     console.log('Extracted URI:', nativeEvent.uri);
@@ -85,14 +45,14 @@ const Layout_Screen = ({ route }) => {
     setSelectedIndex(index);
   };
 
- const handleNext = () => {
-  const imageToPass = selectedIndex === 0 ? imageUri : extractedUri.current;
-  navigation.navigate('EditingScreen', {
-    media: { uri: imageToPass, type: 'photo' },
-    filterIndex: selectedIndex,
-    originalImageUri: imageUri, // Pass the original image URI
-  });
-};
+  const handleNext = () => {
+    const imageToPass = selectedIndex === 0 ? imageUri : extractedUri.current;
+    navigation.navigate('EditingScreen', {
+      media: { uri: imageToPass, type: 'photo' },
+      filterIndex: selectedIndex,
+      originalImageUri: imageUri,
+    });
+  };
 
   const renderFilterComponent = ({ item, index }) => {
     const FilterComponent = item.filterComponent;
@@ -121,36 +81,30 @@ const Layout_Screen = ({ route }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {selectedIndex === 0 ? (
-        imageUri ? (
+      {imageUri ? (
+        selectedIndex === 0 ? (
           <Image
             style={styles.image}
             source={{ uri: imageUri }}
             resizeMode={'contain'}
           />
         ) : (
-          <Text style={styles.noImageText}>
-            No image found. Please capture or select an image.
-          </Text>
-        )
-      ) : (
-        <SelectedFilterComponent
-          onExtractImage={onExtractImage}
-          extractImageEnabled={true}
-          image={
-            imageUri ? (
+          <SelectedFilterComponent
+            onExtractImage={onExtractImage}
+            extractImageEnabled={true}
+            image={
               <Image
                 style={styles.image}
                 source={{ uri: imageUri }}
                 resizeMode={'contain'}
               />
-            ) : (
-              <Text style={styles.noImageText}>
-                No image found. Please capture or select an image.
-              </Text>
-            )
-          }
-        />
+            }
+          />
+        )
+      ) : (
+        <Text style={styles.noImageText}>
+          No image found. Please capture or select an image.
+        </Text>
       )}
 
       <ImageBackground
