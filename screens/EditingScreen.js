@@ -41,7 +41,7 @@ const EditingScreen = ({ route, navigation }) => {
   const [pipFlipped, setPipFlipped] = useState(false);
   const [isPipMenuVisible, setIsPipMenuVisible] = useState(false);
   const [pipSize, setPipSize] = useState(wp('25%'));
-  const [pipBackgroundColor, setPipBackgroundColor] = useState('rgba(0, 0, 0, 0.5)');
+  const [pipBackgroundColor, setPipBackgroundColor] = useState('null');
   const [pipOpacity, setPipOpacity] = useState(1);
   const [pipRotation, setPipRotation] = useState(0);
   const videoRef = useRef(null);
@@ -91,7 +91,8 @@ const EditingScreen = ({ route, navigation }) => {
   const [saturation, setSaturation] = useState(1);
   const [adjustmentsChanged, setAdjustmentsChanged] = useState(false);
   const [isPipSelected, setIsPipSelected] = useState(false);
-  const [selectedPipId, setSelectedPipId] = useState(null);
+  const [pipBackgroundSize, setPipBackgroundSize] = useState(100);
+
   useEffect(() => {
     if (originalImageUri) {
       setCurrentMedia({ uri: originalImageUri, type: 'photo' });
@@ -1163,8 +1164,9 @@ return (
           { scale: pipImage.scale },
           { rotate: `${pipRotation}deg` },
         ],
-        width: pipSize,
-        height: pipSize,
+        backgroundColor: pipBackgroundColor,
+        width: pipSize * (pipBackgroundSize / 100),
+        height: pipSize * (pipBackgroundSize / 100),
         borderWidth: isPipSelected ? 2 : 0,
         borderColor: isPipSelected ? 'white' : 'transparent',
       }
@@ -1179,7 +1181,11 @@ return (
         source={{ uri: pipImage.uri }}
         style={[
           styles.pipImage,
-          { opacity: pipOpacity },
+          { 
+            opacity: pipOpacity,
+            width: '100%',
+            height: '100%',
+          },
           pipFlipped && { transform: [{ scaleX: -1 }] }
         ]}
         resizeMode="contain"
@@ -1322,26 +1328,26 @@ return (
         <LocationMenu onSelectLocation={handleSelectLocation} onClose={handleCloseLocationMenu} />
       </View>
     </Modal>
-    <Modal
+   <Modal
       visible={isPipMenuVisible}
       transparent={true}
       animationType="slide"
     >
       <View style={styles.pipMenuContainer}>
         <PipMenu
-          pipSize={pipSize}
-          setPipSize={setPipSize}
           pipBackgroundColor={pipBackgroundColor}
           setPipBackgroundColor={setPipBackgroundColor}
           pipOpacity={pipOpacity}
           setPipOpacity={setPipOpacity}
           pipRotation={pipRotation}
           setPipRotation={setPipRotation}
+          pipBackgroundSize={pipBackgroundSize}
+          setPipBackgroundSize={setPipBackgroundSize}
           onClose={handleClosePipMenu}
-          currentMedia={currentMedia}
         />
       </View>
     </Modal>
+        
     <Modal
       visible={isStickersVisible}
       transparent={true}

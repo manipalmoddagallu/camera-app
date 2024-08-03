@@ -341,12 +341,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     zIndex: 2
   },
-  scrollBar: {
-    backgroundColor: 'white',
-    paddingVertical: hp('1%'),
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
+ scrollBar: {
+  backgroundColor: 'white',
+  paddingVertical: hp('1%'),
+  borderTopWidth: 1,
+  borderTopColor: '#eee',
+  borderWidth: 1,  // Add this line
+  borderColor: 'black',  // Add this line
+  borderRadius: 5,  // Add this line for rounded corners (optional)
+},
   scrollBarContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -361,6 +364,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
     textAlign: 'center',
+    fontWeight: 'bold', // Add this line
   },
   bottomBar: {
     flexDirection: 'row',
