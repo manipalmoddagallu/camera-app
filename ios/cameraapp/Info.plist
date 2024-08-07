@@ -51,5 +51,24 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>NSCameraUsageDescription</key>
+    <string>We need access to your camera to take photos and record videos within the app.</string>
+
+    <!-- Microphone Usage Description -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>We need access to your microphone to record audio for videos.</string>
+
+    <!-- Photo Library Usage Description -->
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>We need access to your photo library to save and access photos and videos.</string>
+
+    <!-- Location Usage Description -->
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>We need access to your location to geo-tag your photos and videos.</string>
+
+    <!-- Media Library Usage Description -->
+    <key>NSAppleMusicUsageDescription</key>
+    <string>We need access to your media library to allow you to add music to your videos.</string>
+
 </dict>
 </plist>

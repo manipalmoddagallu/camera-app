@@ -8,7 +8,6 @@ import {
   FlatList,
   Button,
   ImageBackground,
-  PanResponder
 } from 'react-native';
 import {
   widthPercentageToDP as wp,
@@ -20,16 +19,8 @@ import ImagePicker from 'react-native-image-crop-picker';
 import Svg, {Polygon, Defs, ClipPath} from 'react-native-svg';
 import {useNavigation} from '@react-navigation/native';
 import {LAYOUTS} from './utils/Layouts';
-import { PinchGestureHandler, PanGestureHandler } from 'react-native-gesture-handler';
-import Animated, {
-  useAnimatedGestureHandler,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
-import ZoomableImage from './ZoomableImage'; // Make sure to import at the top of your file
 
-const LayoutScreen = (props = ({route}) => {
+const Layout = (props = ({route}) => {
   const navigation = useNavigation();
   const selectedImages = route.params;
   console.log('selectedImages', selectedImages);
@@ -37,49 +28,8 @@ const LayoutScreen = (props = ({route}) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedLayoutId, setSelectedLayoutId] = useState(null);
   const [layoutData, setLayoutData] = useState([]);
+
   console.log('layoutDatalayoutData', layoutData);
-const MovableImage = ({ source, containerStyle }) => {
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const viewShotRef = useRef(null);
-
-  const panGestureHandler = useAnimatedGestureHandler({
-    onStart: (_, context) => {
-      context.startX = translateX.value;
-      context.startY = translateY.value;
-    },
-    onActive: (event, context) => {
-      translateX.value = context.startX + event.translationX;
-      translateY.value = context.startY + event.translationY;
-    },
-    onEnd: () => {
-      // Optional: Add spring animation for smooth end of movement
-      translateX.value = withSpring(translateX.value);
-      translateY.value = withSpring(translateY.value);
-    },
-  });
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { translateX: translateX.value },
-        { translateY: translateY.value },
-      ],
-    };
-  });
-
-  return (
-    <PanGestureHandler onGestureEvent={panGestureHandler}>
-      <Animated.View style={[containerStyle, { overflow: 'visible' }]}>
-        <Animated.Image
-          source={source}
-          style={[styles.image, animatedStyle]}
-          resizeMode="cover"
-        />
-      </Animated.View>
-    </PanGestureHandler>
-  );
-};
 
   useEffect(() => {
     const newLayoutIndex = selectedIndex;
@@ -90,7 +40,14 @@ const MovableImage = ({ source, containerStyle }) => {
     setSelectedLayoutId(id);
   };
 
- 
+  const getSelectedImage = (layoutId, tabId) => {
+    const layout = layoutData.find(item => item.id === layoutId);
+    if (layout) {
+      const image = layout.images.find(img => img.id === tabId);
+      return image ? image.image : null;
+    }
+    return null;
+  };
 
   const getAllSelectedImages = () => {
     const allImages = [];
@@ -107,78 +64,61 @@ const MovableImage = ({ source, containerStyle }) => {
     });
     return allImages;
   };
-const handleSaveAndNavigate = () => {
-  const selectedImages = getAllSelectedImages();
-  console.log('Selected Images:', selectedImages);
-  
-  // Create a media object from the first selected image
-  const firstImage = selectedImages[0];
-  const mediaFromLayout = firstImage ? {
-    uri: firstImage.image,
-    type: 'photo',
-    isFromLayout: true  // Flag to indicate this is from a layout
-  } : null;
 
-  navigation.navigate('EditingScreen', {
-    media: mediaFromLayout,
-    selectedLayoutImages: selectedImages,
-    selectedLayoutId: selectedLayoutId,
-    layoutData: layoutData,
-  });
-};
-const openImagePicker = (id, tabId) => {
-  if (getSelectedImage(id, tabId)) {
-    // If an image already exists, show an alert or feedback to the user
-    console.log('An image has already been added to this slot');
-    // You can add an alert here if you want to inform the user
-    // Alert.alert('Image already added', 'You cannot add more than one image to this slot');
-    return;
-  }
-
-  ImagePicker.openPicker({})
-    .then(image => {
-      console.log(image);
-      setLayoutImages(id, tabId, image.path);
-    })
-    .catch(error => {
-      console.log('ImagePicker Error: ', error);
+  const handleSaveAndNavigate = () => {
+    const selectedImages = getAllSelectedImages();
+    console.log('Selected Images:', selectedImages);
+    navigation.navigate('EditingScreen', {
+      selectedLayoutImages: selectedImages,
+      selectedLayoutId: selectedLayoutId,
+      layoutData: layoutData,
     });
-};
-const setLayoutImages = (id, tabId, image) => {
-  console.log('Setting image for layout:', id, 'tab:', tabId, 'image:', image);
-  setLayoutData(prevLayoutData => {
-    const newData = [...prevLayoutData];
-    const index = newData.findIndex(item => item.id === id);
-    if (index !== -1) {
-      const existingTabIndex = newData[index].images.findIndex(el => el.id === tabId);
-      if (existingTabIndex !== -1) {
-        // If an image already exists, don't overwrite it
-        console.log('Image already exists for this slot');
-        return prevLayoutData;
-      } else {
-        newData[index].images.push({ id: tabId, image: image });
-      }
-    } else {
-      newData.push({
-        id: id,
-        images: [{ id: tabId, image: image }],
+  };
+
+  const openImagePicker = (id, tabId) => {
+    ImagePicker.openPicker({})
+      .then(image => {
+        console.log(image);
+        setLayoutImages(id, tabId, image.path);
+      })
+      .catch(error => {
+        console.log('ImagePicker Error: ', error);
       });
+  };
+
+  const setLayoutImages = (id, tabId, image) => {
+    const index = layoutData.findIndex(item => item.id === id);
+    if (index !== -1) {
+      setLayoutData(prevLayoutData => {
+        const newData = [...prevLayoutData];
+        const existingTabIndex = newData[index].images.findIndex(
+          el => el.id === tabId,
+        );
+        if (existingTabIndex !== -1) {
+          newData[index].images.splice(existingTabIndex, 1);
+        }
+        newData[index].images.push({
+          id: tabId,
+          image: image,
+        });
+        return newData;
+      });
+    } else {
+      setLayoutData(prevLayoutData => [
+        ...prevLayoutData,
+        {
+          id: id,
+          images: [
+            {
+              id: tabId,
+              image: image,
+            },
+          ],
+        },
+      ]);
     }
-    console.log('New layout data:', newData);
-    return newData;
-  });
-};
-const getSelectedImage = (layoutId, tabId) => {
-  console.log('Getting image for layout:', layoutId, 'tab:', tabId);
-  const layout = layoutData.find(item => item.id === layoutId);
-  if (layout) {
-    const image = layout.images.find(img => img.id === tabId);
-    console.log('Found image:', image);
-    return image ? image.image : null;
-  }
-  console.log('No layout found');
-  return null;
-};
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.selectedLayoutContainer}>
@@ -189,27 +129,23 @@ const getSelectedImage = (layoutId, tabId) => {
                 onPress={() => openImagePicker(selectedLayoutId, 1)}
                 style={styles.layout4ColView}>
                 {getSelectedImage(0, 1) ? (
-                    <View style={{ width: '100%', height: '100%' }}>
-                      <ZoomableImage
-                        source={{uri: getSelectedImage(0, 1)}}
-                        style={styles.ImagesView}
-                      
-                        onError={(e) => console.error('Image load error:', e.nativeEvent.error)}
-                      />
-                    </View>
-                  ) : (
-                    <>
-                      <Text style={{fontSize: 25}}> + </Text>
-                      <Text>Select Image</Text>
-                    </>
-                  )}
+                  <Image
+                    source={{uri: getSelectedImage(0, 1)}}
+                    style={styles.ImagesView}
+                  />
+                ) : (
+                  <>
+                    <Text style={{fontSize: 25}}> + </Text>
+                    <Text>Select Image</Text>
+                  </>
+                )}
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={() => openImagePicker(selectedLayoutId, 2)}
                 style={styles.layout4_2Col}>
                 {getSelectedImage(0, 2) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(0, 2)}}
                     style={styles.ImagesView}
                   />
@@ -226,7 +162,7 @@ const getSelectedImage = (layoutId, tabId) => {
                 onPress={() => openImagePicker(selectedLayoutId, 3)}
                 style={styles.layout4ColView}>
                 {getSelectedImage(0, 3) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(0, 3)}}
                     style={styles.ImagesView}
                   />
@@ -242,7 +178,7 @@ const getSelectedImage = (layoutId, tabId) => {
                 onPress={() => openImagePicker(selectedLayoutId, 4)}
                 style={styles.layout4_2Col}>
                 {getSelectedImage(0, 4) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(0, 4)}}
                     style={styles.ImagesView}
                   />
@@ -261,7 +197,7 @@ const getSelectedImage = (layoutId, tabId) => {
               onPress={() => openImagePicker(selectedLayoutId, 1)}
               style={styles.layout4ColView1}>
               {getSelectedImage(1, 1) ? (
-                <ZoomableImage
+                <Image
                   source={{uri: getSelectedImage(1, 1)}}
                   style={styles.ImagesView}
                 />
@@ -282,7 +218,7 @@ const getSelectedImage = (layoutId, tabId) => {
                   onPress={() => openImagePicker(selectedLayoutId, 1)}
                   style={styles.layout4ColView}>
                   {getSelectedImage(2, 1) ? (
-                    <ZoomableImage
+                    <Image
                       source={{uri: getSelectedImage(2, 1)}}
                       style={styles.ImagesView}
                     />
@@ -297,7 +233,7 @@ const getSelectedImage = (layoutId, tabId) => {
                   onPress={() => openImagePicker(selectedLayoutId, 2)}
                   style={styles.layout4_2Col}>
                   {getSelectedImage(2, 2) ? (
-                    <ZoomableImage
+                    <Image
                       source={{uri: getSelectedImage(2, 2)}}
                       style={styles.ImagesView}
                     />
@@ -492,7 +428,7 @@ const getSelectedImage = (layoutId, tabId) => {
                 onPress={() => openImagePicker(selectedLayoutId, 1)}
                 style={[styles.imageview, styles.rightBorder]}>
                 {getSelectedImage(6, 1) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(6, 1)}}
                     style={styles.ImagesView}
                   />
@@ -508,7 +444,7 @@ const getSelectedImage = (layoutId, tabId) => {
                 onPress={() => openImagePicker(selectedLayoutId, 2)}
                 style={[styles.imageview, {flex: 1}]}>
                 {getSelectedImage(6, 2) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(6, 2)}}
                     style={styles.ImagesView}
                   />
@@ -526,7 +462,7 @@ const getSelectedImage = (layoutId, tabId) => {
                 onPress={() => openImagePicker(selectedLayoutId, 3)}
                 style={[styles.imageview, styles.rightBorder]}>
                 {getSelectedImage(6, 3) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(6, 3)}}
                     style={styles.ImagesView}
                   />
@@ -541,7 +477,7 @@ const getSelectedImage = (layoutId, tabId) => {
                 onPress={() => openImagePicker(selectedLayoutId, 4)}
                 style={[styles.imageview, {flex: 1}]}>
                 {getSelectedImage(6, 4) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(6, 4)}}
                     style={styles.ImagesView}
                   />
@@ -559,7 +495,7 @@ const getSelectedImage = (layoutId, tabId) => {
                 onPress={() => openImagePicker(selectedLayoutId, 5)}
                 style={[styles.imageview, styles.rightBorder]}>
                 {getSelectedImage(6, 5) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(6, 5)}}
                     style={styles.ImagesView}
                   />
@@ -575,7 +511,7 @@ const getSelectedImage = (layoutId, tabId) => {
                 onPress={() => openImagePicker(selectedLayoutId, 6)}
                 style={[styles.imageview, styles.rightBorder]}>
                 {getSelectedImage(6, 6) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(6, 6)}}
                     style={styles.ImagesView}
                   />
@@ -591,7 +527,7 @@ const getSelectedImage = (layoutId, tabId) => {
                 onPress={() => openImagePicker(selectedLayoutId, 7)}
                 style={[styles.imageview, styles.rightBorder]}>
                 {getSelectedImage(6, 7) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(6, 7)}}
                     style={styles.ImagesView}
                   />
@@ -607,7 +543,7 @@ const getSelectedImage = (layoutId, tabId) => {
                 onPress={() => openImagePicker(selectedLayoutId, 8)}
                 style={[styles.imageview, {flex: 1}]}>
                 {getSelectedImage(6, 8) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(6, 8)}}
                     style={styles.ImagesView}
                   />
@@ -629,7 +565,7 @@ const getSelectedImage = (layoutId, tabId) => {
                   onPress={() => openImagePicker(selectedLayoutId, 1)}
                   style={[styles.imageview, styles.rightBorder]}>
                   {getSelectedImage(7, 1) ? (
-                    <ZoomableImage
+                    <Image
                       source={{uri: getSelectedImage(7, 1)}}
                       style={styles.ImagesView}
                     />
@@ -645,7 +581,7 @@ const getSelectedImage = (layoutId, tabId) => {
                   onPress={() => openImagePicker(selectedLayoutId, 2)}
                   style={[styles.imageview, {flex: 1}]}>
                   {getSelectedImage(7, 2) ? (
-                    <ZoomableImage
+                    <Image
                       source={{uri: getSelectedImage(7, 2)}}
                       style={styles.ImagesView}
                     />
@@ -662,7 +598,7 @@ const getSelectedImage = (layoutId, tabId) => {
                 onPress={() => openImagePicker(selectedLayoutId, 3)}
                 style={[styles.imageview, styles.topBorder]}>
                 {getSelectedImage(7, 3) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(7, 3)}}
                     style={styles.ImagesView}
                   />
@@ -680,7 +616,7 @@ const getSelectedImage = (layoutId, tabId) => {
                     onPress={() => openImagePicker(selectedLayoutId, 4)}
                     style={[styles.imageview, styles.rightBorder]}>
                     {getSelectedImage(7, 4) ? (
-                      <ImaZoomableImagege
+                      <Image
                         source={{uri: getSelectedImage(7, 4)}}
                         style={styles.ImagesView}
                       />
@@ -696,7 +632,7 @@ const getSelectedImage = (layoutId, tabId) => {
                     onPress={() => openImagePicker(selectedLayoutId, 5)}
                     style={[styles.imageview, {flex: 1}]}>
                     {getSelectedImage(7, 5) ? (
-                      <ZoomableImage
+                      <Image
                         source={{uri: getSelectedImage(7, 5)}}
                         style={styles.ImagesView}
                       />
@@ -715,7 +651,7 @@ const getSelectedImage = (layoutId, tabId) => {
               onPress={() => openImagePicker(selectedLayoutId, 6)}
               style={[styles.imageview, {flex: 1}]}>
               {getSelectedImage(7, 6) ? (
-                <ZoomableImage
+                <Image
                   source={{uri: getSelectedImage(7, 6)}}
                   style={styles.ImagesView}
                 />
@@ -737,7 +673,7 @@ const getSelectedImage = (layoutId, tabId) => {
                   {flex: 2, borderWidth: 3, borderRadius: 5, margin: 1},
                 ]}>
                 {getSelectedImage(8, 1) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(8, 1)}}
                     style={styles.ImagesView}
                   />
@@ -757,7 +693,7 @@ const getSelectedImage = (layoutId, tabId) => {
                   {flex: 1, borderWidth: 3, borderRadius: 5, margin: 1},
                 ]}>
                 {getSelectedImage(8, 2) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(8, 2)}}
                     style={styles.ImagesView}
                   />
@@ -779,7 +715,7 @@ const getSelectedImage = (layoutId, tabId) => {
                   {flex: 1, borderWidth: 3, borderRadius: 5, margin: 1},
                 ]}>
                 {getSelectedImage(8, 3) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(8, 3)}}
                     style={styles.ImagesView}
                   />
@@ -799,7 +735,7 @@ const getSelectedImage = (layoutId, tabId) => {
                   {flex: 2, borderWidth: 3, borderRadius: 5, margin: 1},
                 ]}>
                 {getSelectedImage(8, 4) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(8, 4)}}
                     style={styles.ImagesView}
                   />
@@ -821,7 +757,7 @@ const getSelectedImage = (layoutId, tabId) => {
                   style={[styles.imageview, {flex: 2, borderBottomWidth: 3}]}
                   onPress={() => openImagePicker(selectedLayoutId, 1)}>
                   {getSelectedImage(9, 1) ? (
-                    <ZoomableImage
+                    <Image
                       source={{uri: getSelectedImage(9, 1)}}
                       style={styles.ImagesView}
                     />
@@ -837,7 +773,7 @@ const getSelectedImage = (layoutId, tabId) => {
                   style={styles.touchviews}
                   onPress={() => openImagePicker(selectedLayoutId, 2)}>
                   {getSelectedImage(9, 2) ? (
-                    <ZoomableImage
+                    <Image
                       source={{uri: getSelectedImage(9, 2)}}
                       style={styles.ImagesView}
                     />
@@ -857,7 +793,7 @@ const getSelectedImage = (layoutId, tabId) => {
                   style={styles.touchviews}
                   onPress={() => openImagePicker(selectedLayoutId, 3)}>
                   {getSelectedImage(9, 3) ? (
-                    <ZoomableImage
+                    <Image
                       source={{uri: getSelectedImage(9, 3)}}
                       style={styles.ImagesView}
                     />
@@ -873,7 +809,7 @@ const getSelectedImage = (layoutId, tabId) => {
                   style={[styles.touchviews, {borderTopWidth: 3}]}
                   onPress={() => openImagePicker(selectedLayoutId, 4)}>
                   {getSelectedImage(9, 4) ? (
-                    <ZoomableImage
+                    <Image
                       source={{uri: getSelectedImage(9, 4)}}
                       style={styles.ImagesView}
                     />
@@ -894,7 +830,7 @@ const getSelectedImage = (layoutId, tabId) => {
                 onPress={() => openImagePicker(selectedLayoutId, 1)}
                 style={styles.touchviews}>
                 {getSelectedImage(10, 1) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(10, 1)}}
                     style={styles.ImagesView}
                   />
@@ -913,7 +849,7 @@ const getSelectedImage = (layoutId, tabId) => {
                 onPress={() => openImagePicker(selectedLayoutId, 2)}
                 style={styles.touchviews}>
                 {getSelectedImage(10, 2) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(10, 2)}}
                     style={styles.ImagesView}
                   />
@@ -929,7 +865,7 @@ const getSelectedImage = (layoutId, tabId) => {
                 onPress={() => openImagePicker(selectedLayoutId, 3)}
                 style={[styles.touchviews, {borderTopWidth: 3}]}>
                 {getSelectedImage(10, 3) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(10, 3)}}
                     style={styles.ImagesView}
                   />
@@ -949,7 +885,7 @@ const getSelectedImage = (layoutId, tabId) => {
                 onPress={() => openImagePicker(selectedLayoutId, 1)}
                 style={[styles.borderwidth, {flex: 1}]}>
                 {getSelectedImage(11, 1) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(11, 1)}}
                     style={styles.ImagesView}
                   />
@@ -965,7 +901,7 @@ const getSelectedImage = (layoutId, tabId) => {
                 onPress={() => openImagePicker(selectedLayoutId, 2)}
                 style={[styles.borderwidth, {flex: 2}]}>
                 {getSelectedImage(11, 2) ? (
-                  <ZoomableImage
+                  <Image
                     source={{uri: getSelectedImage(11, 2)}}
                     style={styles.ImagesView}
                   />
@@ -1148,7 +1084,6 @@ const styles = StyleSheet.create({
     height: '100%',
     flex: 1,
     resizeMode: 'cover',
-    zIndex:100
   },
   layout4ColView1: {
     flex: 1,
@@ -1323,4 +1258,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LayoutScreen;
+export default Layout;

@@ -40,10 +40,12 @@ target 'cameraapp' do
     # An absolute path to your application root.
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
+  pod 'YogaKit'
 
   target 'cameraappTests' do
     inherit! :complete
     # Pods for testing
+
   end
 
   post_install do |installer|
