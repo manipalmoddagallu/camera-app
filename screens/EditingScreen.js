@@ -12,7 +12,6 @@ import PipMenu from './PipMenu';
 import { FILTERS } from './utils/Filters';
 import StickerScreen from './StickerScreen';
 import FastImage from 'react-native-fast-image';
-import RNFS from 'react-native-fs';
 import axios from 'axios';
 import ViewShot from "react-native-view-shot";
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -26,7 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import LayoutView from './Layouts/LayoutView';
 
 const EditingScreen = ({ route, navigation }) => {
- const { media = null, filterIndex = -1,  draftedMedia = null, originalImageUri = null, selectedLayoutImages = [], selectedLayoutId = null,layoutData = []} = route?.params || {};
+  const { media = null, filterIndex = -1,  draftedMedia = null, originalImageUri = null, selectedLayoutImages = [], selectedLayoutId = null,layoutData = []} = route?.params || {};
   const [currentMedia, setCurrentMedia] = useState(route.params?.media || null);
   const [isFromLayout, setIsFromLayout] = useState(false);
   const [isVideo, setIsVideo] = useState(media?.type === 'video' || media?.type === 'boomerang');
@@ -40,8 +39,8 @@ const EditingScreen = ({ route, navigation }) => {
   const [pipImage, setPipImage] = useState(null);
   const [pipFlipped, setPipFlipped] = useState(false);
   const [isPipMenuVisible, setIsPipMenuVisible] = useState(false);
-  const [pipSize, setPipSize] = useState(wp('25%'));
-  const [pipBackgroundColor, setPipBackgroundColor] = useState('rgba(0, 0, 0, 0.5)');
+  const [pipSize, setPipSize] = useState(wp('40%'));
+  const [pipBackgroundColor, setPipBackgroundColor] = useState(null);
   const [pipOpacity, setPipOpacity] = useState(1);
   const [pipRotation, setPipRotation] = useState(0);
   const videoRef = useRef(null);
@@ -86,11 +85,13 @@ const EditingScreen = ({ route, navigation }) => {
   const [pipZoomMode, setPipZoomMode] = useState(false);
   const [editingTextId, setEditingTextId] = useState(null);
   const [croppedImage, setCroppedImage] = useState(null);
-  const [isPipSelected, setIsPipSelected] = useState(false);
   const SelectedFilterComponent = selectedFilter ? selectedFilter.filterComponent : React.Fragment;
   const [isPipTouched, setIsPipTouched] = useState(false);
   const [saturation, setSaturation] = useState(1);
   const [adjustmentsChanged, setAdjustmentsChanged] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [draggedItem, setDraggedItem] = useState(null);
   useEffect(() => {
     if (originalImageUri) {
       setCurrentMedia({ uri: originalImageUri, type: 'photo' });
@@ -127,18 +128,7 @@ const EditingScreen = ({ route, navigation }) => {
       if (media) {
         setCurrentMedia(media);
       }
-    }, [media]);
-  useEffect(() => {
-    if (currentMedia) {
-      RNFS.exists(currentMedia.uri.replace('file://', ''))
-        .then((exists) => {
-          console.log('File exists:', exists);
-        })
-        .catch((error) => {
-          console.error('Error checking file existence:', error);
-        });
-    }
-  }, [currentMedia]);
+  }, [media]);
   useEffect(() => {
     if (!currentMedia) {
       console.log('No media received');
@@ -155,7 +145,6 @@ const EditingScreen = ({ route, navigation }) => {
     const newMedia = route.params?.media;
     const croppedImage = route.params?.croppedImage;
     const originalImage = route.params?.originalImage;
-
     if (croppedImage) {
       console.log('Received cropped image:', croppedImage);
       setCurrentMedia(croppedImage);
@@ -166,7 +155,7 @@ const EditingScreen = ({ route, navigation }) => {
       setIsVideo(true);
     } else if (newMedia) {
       setCurrentMedia(newMedia);
-setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');    } else if (!currentMedia) {
+      setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');    } else if (!currentMedia) {
       console.log('No media received');
       Alert.alert('Error', 'No media provided', [
         { text: 'OK', onPress: () => navigation.goBack() }
@@ -175,42 +164,48 @@ setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');    } els
       console.log('Received media:', currentMedia);
     }
   });
-  
 
   return unsubscribe;
   }, [navigation, route.params]);
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      const trimmedVideo = route.params?.trimmedVideo;
+      const croppedVideo = route.params?.croppedVideo;
       const newMedia = route.params?.media;
       const croppedImage = route.params?.croppedImage;
       const originalImage = route.params?.originalImage;
       const editedImage = route.params?.editedImage;
-      const croppedVideo = route.params?.croppedVideo;
-      const originalImageUri = route.params?.originalImageUri; // Add this line
-      const layoutData = route.params?.media?.layoutData;
-    const layoutScreenshot = route.params?.media?.layoutScreenshot;
+      const originalImageUri = route.params?.originalImageUri;
+      const layoutData = route.params?.layoutData;
+      const layoutScreenshot = route.params?.layoutScreenshot;
 
-      if (trimmedVideo) {
-        console.log('Received trimmed video:', trimmedVideo);
-        setCurrentMedia(trimmedVideo);
-        setIsVideo(true);
-      } else if (croppedVideo) {
+      if (croppedVideo) {
+        console.log('Received cropped video:', croppedVideo);
         setCurrentMedia(croppedVideo);
         setIsVideo(true);
-      } else if (editedImage) {
-        setCurrentMedia({ uri: editedImage, type: 'photo' });
-        setIsVideo(false);
+      } else if (newMedia) {
+        console.log('Received new media:', newMedia);
+        setCurrentMedia(newMedia);
+        setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');
       } else if (croppedImage) {
         console.log('Received cropped image:', croppedImage);
         setCurrentMedia(croppedImage);
         setOriginalImage(originalImage || currentMedia);
         setIsVideo(false);
-      } else if (newMedia) {
-        setCurrentMedia(newMedia);
-  setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');    } else if (originalImageUri) { // Add this condition
+      } else if (editedImage) {
+        setCurrentMedia({ uri: editedImage, type: 'photo' });
+        setIsVideo(false);
+      } else if (originalImageUri) {
         setCurrentMedia({ uri: originalImageUri, type: 'photo' });
         setIsVideo(false);
+      } else if (layoutData && layoutScreenshot) {
+        setCurrentMedia({
+          uri: layoutScreenshot,
+          type: 'photo',
+          isFromLayout: true,
+          layoutData: layoutData,
+        });
+        setIsVideo(false);
+        setIsFromLayout(true);
       } else if (!currentMedia) {
         console.log('No media received');
         Alert.alert('Error', 'No media provided', [
@@ -220,41 +215,42 @@ setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');    } els
         console.log('Using existing media:', currentMedia);
       }
     });
-
     return unsubscribe;
   }, [navigation, route.params, currentMedia]);
   useEffect(() => {
-    if (media) {
-      setCurrentMedia(media);
-      setIsFromLayout(media.isFromLayout || false);
-    } else if (selectedLayoutImages.length > 0) {
-      // If no media but we have layout images, use the first one
-      const firstImage = selectedLayoutImages[0];
-      setCurrentMedia({
-        uri: firstImage.image,
-        type: 'photo',
-        isFromLayout: true
-      });
-      setIsFromLayout(true);
-    } else {
-      console.log('No media received');
-      Alert.alert('Error', 'No media provided', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
-    }
-  }, [media, selectedLayoutImages]);
+    const unsubscribe = navigation.addListener('focus', () => {
+      const croppedVideo = route.params?.croppedVideo;
+      const newMedia = route.params?.media;
+
+      if (croppedVideo) {
+        console.log('Received cropped video:', croppedVideo);
+        setCurrentMedia(croppedVideo);
+        setIsVideo(true);
+      } else if (newMedia) {
+        console.log('Received new media:', newMedia);
+        setCurrentMedia(newMedia);
+        setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');
+      } else if (!currentMedia) {
+        console.log('No media received');
+        Alert.alert('Error', 'No media provided', [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+      } else {
+        console.log('Using existing media:', currentMedia);
+      }
+    });
+    return unsubscribe;
+  }, [navigation, route.params, currentMedia]);
   const handleBrushPress = async () => {
     if (!viewShotRef) {
       console.error('ViewShot ref is not available');
       Alert.alert('Error', 'The drawing tool is not ready yet. Please try again.');
       return;
     }
-
     try {
       console.log('Current media:', currentMedia);
       console.log('Is video:', isVideo);
       console.log('Is from layout:', isFromLayout);
-
       let imageUri;
       if (isFromLayout) {
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -290,10 +286,52 @@ setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');    } els
       );
     }
   };
+const ColorPanel = ({ onColorChange }) => {
+  const colors = [
+    '#FF0000', // Red
+    '#00FF00', // Lime
+    '#0000FF', // Blue
+    '#FFFF00', // Yellow
+    '#FF00FF', // Magenta
+    '#00FFFF', // Cyan
+    '#FFA500', // Orange
+    '#800080', // Purple
+    '#008000', // Green
+    '#4B0082', // Indigo
+    '#FF4500', // OrangeRed
+    '#1E90FF', // DodgerBlue
+    '#FFD700', // Gold
+    '#00CED1', // DarkTurquoise
+    '#FF1493', // DeepPink
+    '#32CD32', // LimeGreen
+    '#8A2BE2', // BlueViolet
+    '#20B2AA', // LightSeaGreen
+  ];
+  return (
+    <View style={styles.colorPanel}>
+      {colors.map((color, index) => (
+        <TouchableOpacity
+          key={index}
+          style={[styles.colorButton, { backgroundColor: color }]}
+          onPress={() => onColorChange(color)}
+        />
+      ))}
+    </View>
+  );
+};
+const DeleteZone = ({ visible, position }) => {
+  if (!visible) return null;
+
+  return (
+    <Animated.View style={[styles.deleteZone, { top: -700, right: -20 }]}>
+      <Icon name="trash" size={30} color="red" />
+    </Animated.View>
+  );
+};
   const handleImageCropped = (newImage) => {
   setCroppedImage(newImage);
   setCurrentMedia(newImage);
-};
+  };
   const toggleRecordingMenu = () => {
     setIsRecordingMenuVisible(!isRecordingMenuVisible);
   };
@@ -413,15 +451,14 @@ setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');    } els
       { icon: 'arrow-down', text: 'Lowercase', iconSet: 'FontAwesome', onPress: () => onTextStyle('lowercase') },
       { icon: 'color-palette', text: 'Color', iconSet: 'Ionicons', onPress: onColorSelect },
     ];
-
     return (
       <View style={styles.textDropdown}>
         {textOptions.map((option, index) => (
           <TouchableOpacity key={index} style={styles.textDropdownItem} onPress={option.onPress}>
             {option.iconSet === 'Ionicons' ? (
-              <Icon name={option.icon} size={16} color="#fff" />
+              <Icon name={option.icon} size={12} color="#fff" />
             ) : (
-              <Icon1 name={option.icon} size={16} color="#fff" />
+              <Icon1 name={option.icon} size={12} color="#fff" />
             )}
             <Text style={styles.textDropdownItemText}>{option.text}</Text>
           </TouchableOpacity>
@@ -492,7 +529,8 @@ setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');    } els
       ...location,
       pan: new Animated.ValueXY(),
       scale: new Animated.Value(1),
-      rotate: new Animated.Value(0)
+      rotate: new Animated.Value(0),
+      color: '#FFFFFF' // Add a default color
     });
     setIsLocationMenuVisible(false);
   };
@@ -547,11 +585,12 @@ setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');    } els
     Alert.alert('Error', 'Failed to save draft. Please try again.');
   }
   };
-  const handleTextStyle = (style, value) => {
+  const handleTextStyle = (style) => {
     if (style === 'add') {
       const newText = {
         id: Date.now(),
-        content: 'New Text',
+        content: '',
+        placeholder: 'Enter text here',
         pan: new Animated.ValueXY(),
         scale: new Animated.Value(1),
         rotate: new Animated.Value(0),
@@ -563,145 +602,151 @@ setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');    } els
       };
       setTextElements(prevElements => [...prevElements, newText]);
       setSelectedTextId(newText.id);
+      setEditingTextId(newText.id);
     } else {
-      setTextElements(prevElements => prevElements.map(text => {
-        if (text.id === selectedTextId) {
-          switch (style) {
-            case 'underline':
-              return {
-                ...text,
+      setTextElements(prevElements =>
+        prevElements.map(element =>
+          element.id === selectedTextId
+            ? {
+                ...element,
                 style: {
-                  ...text.style,
-                  textDecorationLine: text.style.textDecorationLine === 'underline' ? 'none' : 'underline'
-                }
-              };
-            case 'bold':
-              return {
-                ...text,
-                style: {
-                  ...text.style,
-                  fontWeight: text.style.fontWeight === 'bold' ? 'normal' : 'bold'
-                }
-              };
-            case 'uppercase':
-              return { ...text, content: text.content.toUpperCase() };
-            case 'lowercase':
-              return { ...text, content: text.content.toLowerCase() };
-            case 'color':
-              return {
-                ...text,
-                style: {
-                  ...text.style,
-                  color: value
-                }
-              };
-            default:
-              return text;
-          }
-        }
-        return text;
-      }));
+                  ...element.style,
+                  ...(style === 'underline'
+                    ? { textDecorationLine: element.style.textDecorationLine === 'underline' ? 'none' : 'underline' }
+                    : {}),
+                  ...(style === 'bold'
+                    ? { fontWeight: element.style.fontWeight === 'bold' ? 'normal' : 'bold' }
+                    : {}),
+                },
+                content:
+                  style === 'uppercase'
+                    ? element.content.toUpperCase()
+                    : style === 'lowercase'
+                    ? element.content.toLowerCase()
+                    : element.content,
+              }
+            : element
+        )
+      );
     }
-    if (style === 'color') {
-      setSelectedColor(value);
-    }
-    setIsTextDropdownVisible(false);
   };
-  const createPanResponder = (item, itemType) => {
-    let lastScale = 1;
-    let lastRotation = 0;
-    let lastDistance = 0;
+const createPanResponder = (item, itemType) => {
+  let lastScale = 1;
+  let lastRotation = 0;
+  let lastDistance = 0;
 
-    return PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        setIsMoving(true);
-        setMovingItem({ ...item, type: itemType });
+  return PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
 
-        if (itemType === 'pip') {
-        setIsPipSelected(true);
+    onPanResponderGrant: () => {
+      setIsDragging(true);
+      setDraggedItem({ ...item, type: itemType });
+      setIsMoving(true);
+      setMovingItem({ ...item, type: itemType });
+      if (itemType === 'pip') {
+        setIsPipTouched(true);
+      }
+      item.pan.setOffset({
+        x: item.pan.x._value,
+        y: item.pan.y._value
+      });
+      item.pan.setValue({ x: 0, y: 0 });
+    },
+
+    onPanResponderMove: (event, gestureState) => {
+      const { touches } = event.nativeEvent;
+  const { moveX, moveY } = gestureState;
+       const deleteZoneX = wp('100%') - 70; // 20 pixels from the right edge
+  const deleteZoneY = 20; 
+
+      if (moveX > deleteZoneX && moveY < deleteZoneY + 50) {
+        // Change delete zone color or style to indicate hover
+        // You can implement this by updating a state that controls the delete zone style
+      }
+
+      if (touches.length === 1) {
+        // Single touch - handle dragging
+        if (itemType === 'pip' && pipZoomMode) {
+          // Diagonal drag for zooming
+          const dx = gestureState.dx;
+          const dy = gestureState.dy;
+          const dragDistance = Math.sqrt(dx * dx + dy * dy);
+          const zoomFactor = 1 + dragDistance / 200; // Adjust this value to control zoom sensitivity
+          const newScale = Math.min(Math.max(lastScale * zoomFactor, 0.5), 3); // Limit scale between 0.5 and 3
+          item.scale.setValue(newScale);
+        } else {
+          // Regular dragging
+          Animated.event(
+            [null, { dx: item.pan.x, dy: item.pan.y }],
+            { useNativeDriver: false }
+          )(event, gestureState);
         }
+      } else if (touches.length === 2) {
+        // Two touches - handle pinch to zoom and rotation
+        const touch1 = touches[0];
+        const touch2 = touches[1];
 
-        item.pan.setOffset({
-          x: item.pan.x._value,
-          y: item.pan.y._value
-        });
-        item.pan.setValue({ x: 0, y: 0 });
-      },
-      onPanResponderMove: (event, gestureState) => {
-        const { touches } = event.nativeEvent;
+        const distance = Math.sqrt(
+          Math.pow(touch2.pageX - touch1.pageX, 2) +
+          Math.pow(touch2.pageY - touch1.pageY, 2)
+        );
 
-        if (touches.length === 1) {
-          if (itemType === 'pip' && pipZoomMode) {
-            // Diagonal drag for zooming
-            const dx = gestureState.dx;
-            const dy = gestureState.dy;
-            const dragDistance = Math.sqrt(dx * dx + dy * dy);
-            const zoomFactor = 1 + dragDistance / 200; // Adjust this value to control zoom sensitivity
-            item.scale.setValue(lastScale * zoomFactor);
-          } else {
-            Animated.event(
-              [null, { dx: item.pan.x, dy: item.pan.y }],
-              { useNativeDriver: false }
-            )(event, gestureState);
-          }
-        } else if (touches.length === 2) {
-          const touch1 = touches[0];
-          const touch2 = touches[1];
-
-          const distance = Math.sqrt(
-            Math.pow(touch2.pageX - touch1.pageX, 2) +
-            Math.pow(touch2.pageY - touch1.pageY, 2)
-          );
-
-          if (lastDistance === 0) {
-            lastDistance = distance;
-            return;
-          }
-
-          const scale = distance / lastDistance;
-          const newScale = lastScale * scale;
-
-          if (newScale > 0.5 && newScale < 3) {
-            item.scale.setValue(newScale);
-            lastScale = newScale;
-          }
-
-          const angle = Math.atan2(touch2.pageY - touch1.pageY, touch2.pageX - touch1.pageX);
-          const rotation = angle - lastRotation;
-          item.rotate.setValue(item.rotate._value + rotation);
-
-          lastRotation = angle;
+        if (lastDistance === 0) {
           lastDistance = distance;
+          return;
         }
-      },
-      onPanResponderRelease: () => {
+
+        const scale = distance / lastDistance;
+        const newScale = Math.min(Math.max(lastScale * scale, 0.5), 3); // Limit scale between 0.5 and 3
+
+        item.scale.setValue(newScale);
+        lastScale = newScale;
+
+        const angle = Math.atan2(touch2.pageY - touch1.pageY, touch2.pageX - touch1.pageX);
+        const rotation = angle - lastRotation;
+        item.rotate.setValue(item.rotate._value + rotation);
+        lastRotation = angle;
+        lastDistance = distance;
+      }
+    },
+
+    onPanResponderRelease: (event, gestureState) => {
+      const { moveX, moveY } = gestureState;
+  const deleteZoneX = wp('100%') - 70; // 20 pixels from the right edge
+  const deleteZoneY = 20; 
+
+      if (moveX > deleteZoneX && moveY < deleteZoneY + 50) {
+        // Delete the item
+        deleteItem(item, itemType);
+      } else {
         setIsMoving(false);
         setMovingItem(null);
-
         if (itemType === 'pip') {
           setIsPipTouched(false);
         }
-
-       
         lastDistance = 0;
         lastRotation = 0;
         lastScale = item.scale._value;
-      },
-      onPanResponderTerminationRequest: () => true,
-      onShouldBlockNativeResponder: () => false,
-      hitSlop: { top: 20, bottom: 20, left: 20, right: 20 },
-    });
-  };
+        item.pan.flattenOffset();
+      }
+
+      setIsDragging(false);
+      setDraggedItem(null);
+    },
+
+    onPanResponderTerminationRequest: () => true,
+    onShouldBlockNativeResponder: () => false,
+    hitSlop: { top: 20, bottom: 20, left: 20, right: 20 },
+  });
+};
   const handlePipZoomPress = () => {
-  // Toggle zoom mode
   setPipZoomMode(!pipZoomMode);
   };
   const handlePIPPress = async () => {
     try {
       const result = await CameraRoll.getPhotos({
-        first: 1000,
+        first: 35,
         assetType: 'Photos',
         include: ['filename', 'fileSize', 'location'],
       });
@@ -709,11 +754,17 @@ setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');    } els
       navigation.navigate('GalleryPicker', {
         photos: result.edges,
         onSelectImage: (selectedImage) => {
-          setPipImage({
-            uri: selectedImage.node.image.uri,
-            pan: new Animated.ValueXY(),
-            scale: new Animated.Value(1),
-            rotate: new Animated.Value(0)
+          Image.getSize(selectedImage.node.image.uri, (width, height) => {
+            const aspectRatio = width / height;
+            const newWidth = wp('40%');
+            const newHeight = newWidth / aspectRatio;
+            setPipSize({ width: newWidth, height: newHeight });
+            setPipImage({
+              uri: selectedImage.node.image.uri,
+              pan: new Animated.ValueXY(),
+              scale: new Animated.Value(1),
+              rotate: new Animated.Value(0)
+            });
           });
         }
       });
@@ -764,7 +815,13 @@ setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');    } els
   const handleEditText = (id, newContent) => {
     setTextElements(prevElements =>
       prevElements.map(element =>
-        element.id === id ? { ...element, content: newContent } : element
+        element.id === id 
+          ? { 
+              ...element, 
+              content: newContent,
+              placeholder: newContent ? null : element.placeholder // Keep placeholder if content is empty
+            } 
+          : element
       )
     );
     setEditingTextId(id);
@@ -794,18 +851,18 @@ setIsVideo(newMedia.type === 'video' || newMedia.type === 'boomerang');    } els
       outputRange: ['0deg', '360deg']
     })},
   ]
-});
-const getPipStyle = () => ({
-  transform: [
-    { translateX: pipImage.pan.x },
-    { translateY: pipImage.pan.y },
-    { scale: pipImage.scale },
-    { rotate: `${pipRotation}deg` },
-  ],
-  backgroundColor: pipBackgroundColor,
-  width: pipSize,
-  height: pipSize,
-});
+  });
+  const getPipStyle = () => ({
+    transform: [
+      { translateX: pipImage.pan.x },
+      { translateY: pipImage.pan.y },
+      { scale: pipImage.scale },
+      { rotate: `${pipRotation}deg` },
+    ],
+    backgroundColor: pipBackgroundColor,
+    width: pipSize,
+    height: pipSize,
+  });
   const adjustSaturation = (s) => {
     const adjustedS = 1 + (s - 1) * 0.5;
     return [
@@ -860,12 +917,47 @@ const getPipStyle = () => ({
       0, 0, 0, 1, 0,
     ];
   };
-  const handleContainerTouch = () => {
-  setIsPipSelected(false);
-  };
+  const deleteItem = (item, itemType) => {
+  switch (itemType) {
+    case 'friend':
+      setSelectedFriends(prevFriends => prevFriends.filter(friend => friend.id !== item.id));
+      break;
+    case 'hashtag':
+      setSelectedHashtags(prevHashtags => prevHashtags.filter(hashtag => hashtag.id !== item.id));
+      break;
+    case 'location':
+      setSelectedLocation(null);
+      break;
+    case 'text':
+      setTextElements(prevElements => prevElements.filter(element => element.id !== item.id));
+      break;
+    case 'sticker':
+      setSelectedStickers(prevStickers => prevStickers.filter(sticker => sticker.id !== item.id));
+      break;
+    case 'pip':
+      setPipImage(null);
+      break;
+  }
+};
+
 return (
-  
-  <SafeAreaView style={styles.container}>
+  <SafeAreaView style={styles.container} >
+    {(selectedItem && (selectedItem.type === 'friend' || selectedItem.type === 'hashtag' || selectedItem.type === 'location')) && (
+      <ColorPanel onColorChange={(color) => {
+        if (selectedItem.type === 'friend') {
+          setSelectedFriends(prevFriends => prevFriends.map(friend => 
+            friend.id === selectedItem.id ? { ...friend, color: color } : friend
+          ));
+        } else if (selectedItem.type === 'hashtag') {
+          setSelectedHashtags(prevHashtags => prevHashtags.map(hashtag => 
+            hashtag.id === selectedItem.id ? { ...hashtag, color: color } : hashtag
+          ));
+        } else if (selectedItem.type === 'location') {
+          setSelectedLocation(prevLocation => ({ ...prevLocation, color: color }));
+        }
+      }} />
+    )}
+    <DeleteZone visible={isDragging} position={new Animated.Value(hp('80%'))} />
     <TopBar
           currentMedia={croppedImage || currentMedia}
           onPIPPress={handlePIPPress}
@@ -898,7 +990,7 @@ return (
           onImageCropped={handleImageCropped}
           onTextStyle={handleTextStyle}
         />
-    <View style={styles.topBar}>
+      <View style={styles.topBar}>
         <TouchableOpacity onPress={handleBackPress}>
           <Icon name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
@@ -916,45 +1008,64 @@ return (
           />
         </TouchableOpacity>
       </View>
-        <View style={styles.leftIconsContainer}>
-  <TouchableOpacity style={styles.icon} onPress={handleFriendsPress}>
-    <Icon4 name="email" size={18} color="#000" />
-  </TouchableOpacity>
-  <TouchableOpacity style={styles.icon} onPress={handleLocationPress}>
-    <Icon name="location" size={18} color="#000" />
-  </TouchableOpacity>
-  <TouchableOpacity style={styles.icon} onPress={Priview}>
-    <Icon name="eye" size={18} color="#000" />
-  </TouchableOpacity>
-  <TouchableOpacity style={styles.icon} onPress={handleHashtagPress}>
-    <Icon1 name="hashtag" size={18} color="#000" />
-  </TouchableOpacity>
-        </View>
-       <View style={styles.rightIconsContainer}>
-  <TouchableOpacity style={styles.icon} onPress={handleBrushPress}>
-    <Icon name="brush" size={18} color="#000" />
-  </TouchableOpacity>
-  <TouchableOpacity style={styles.icon} onPress={toggleRecordingMenu}>
-    <Icon name="mic" size={18} color="#000" />
-  </TouchableOpacity>
- <TouchableOpacity style={styles.icon} onPress={toggleTextDropdown}>
-  <Icon name="text" size={18} color="#000" />
-</TouchableOpacity>
-  {isVideo && (
-    <TouchableOpacity onPress={handleSpeedChange} style={styles.icon}>
-      <Text style={styles.speedText}>{playbackSpeed}x</Text>
-    </TouchableOpacity>
-  )}
-        </View>
-<ViewShot 
-  ref={ref => setViewShotRef(ref)} 
-  options={{ format: "jpg", quality: 1 }}
-  style={styles.viewShot}
->
-  <TouchableWithoutFeedback onPress={handleContainerTouch}>
+      <View style={styles.leftIconsContainer}>
+          <TouchableOpacity style={styles.icon} onPress={handleFriendsPress}>
+            <Icon4 name="email" size={18} color="#000" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.icon} onPress={handleLocationPress}>
+            <Icon name="location" size={18} color="#000" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.icon} onPress={Priview}>
+            <Icon name="eye" size={18} color="#000" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.icon} onPress={handleHashtagPress}>
+            <Icon1 name="hashtag" size={18} color="#000" />
+          </TouchableOpacity>
+      </View>
+      <View style={styles.rightIconsContainer}>
+        <TouchableOpacity style={styles.icon} onPress={handleBrushPress}>
+          <Icon name="brush" size={18} color="#000" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.icon} onPress={toggleRecordingMenu}>
+          <Icon name="mic" size={18} color="#000" />
+        </TouchableOpacity>
+      <TouchableOpacity style={styles.icon} onPress={toggleTextDropdown}>
+        <Icon name="text" size={18} color="#000" />
+      </TouchableOpacity>
+        {isVideo && (
+          <TouchableOpacity onPress={handleSpeedChange} style={styles.icon}>
+            <Text style={styles.speedText}>{playbackSpeed}x</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    <ViewShot 
+      ref={ref => setViewShotRef(ref)} 
+      options={{ format: "jpg", quality: 1 }}
+      style={styles.viewShot}
+    >
+    <View style={styles.mediaContainer} pointerEvents="box-none"   
+    onTouchStart={(event) => { 
+      if (pipImage && isPipTouched) {
+      const { locationX, locationY } = event.nativeEvent;
+      const pipBounds = {
+        left: pipImage.pan.x._value,
+        top: pipImage.pan.y._value,
+        right: pipImage.pan.x._value + pipSize.width,
+        bottom: pipImage.pan.y._value + pipSize.height
+      };
 
-    <View style={styles.mediaContainer} pointerEvents="box-none">
-  {currentMedia && (
+      if (
+        locationX < pipBounds.left ||
+        locationX > pipBounds.right ||
+        locationY < pipBounds.top ||
+        locationY > pipBounds.bottom
+      ) {
+        setIsPipTouched(false);
+      }}
+       setSelectedItem(null);
+      }}
+      >
+      {currentMedia && (
               <View style={styles.mediaWrapper}>
                 {isFromLayout ? (
                   <SelectedFilterComponent>
@@ -1026,7 +1137,7 @@ return (
                           }
                         />
                       ) : (
-                        <Image
+                        <FastImage
                           source={{ uri: croppedImage ? croppedImage.uri : currentMedia.uri, cache: 'force-cache' }}
                           style={[styles.media]}
                           resizeMode="contain"
@@ -1036,40 +1147,48 @@ return (
                   </View>
                 )}
               </View>
-            )}
+      )}
       {selectedFriends.map((friend) => {
-        const panResponder = createPanResponder(friend, 'friend');
-        return (
-          <Animated.View
-            key={friend.id}
-            style={[
-              styles.overlay,
-              {
-                transform: [
-                  { translateX: friend.pan.x },
-                  { translateY: friend.pan.y },
-                  { scale: friend.scale },
-                  { rotate: friend.rotate.interpolate({
-                    inputRange: [0, 360],
-                    outputRange: ['0deg', '360deg']
-                  })},
-                ],
+          const panResponder = createPanResponder(friend, 'friend');
+          const isSelected = selectedItem && selectedItem.id === friend.id && selectedItem.type === 'friend';
+          return (
+            <Animated.View
+              key={friend.id}
+              style={[
+                styles.overlay,
+                isSelected && { backgroundColor: 'rgba(255, 255, 255, 0.5)' },
+                {
+                  transform: [
+                    { translateX: friend.pan.x },
+                    { translateY: friend.pan.y },
+                    { scale: friend.scale },
+                    { rotate: friend.rotate.interpolate({
+                      inputRange: [0, 360],
+                      outputRange: ['0deg', '360deg']
+                    })},
+                  ],
                   zIndex: 10, 
-              }
-            ]}
-            {...panResponder.panHandlers}
-          >
-            <Text style={styles.overlayText}>@{friend.name}</Text>
-          </Animated.View>
-        );
+                                  }
+              ]}
+              {...panResponder.panHandlers}
+               onTouchStart={(event) => {
+              event.stopPropagation();
+              setSelectedItem({ id: friend.id, type: 'friend' });
+            }}
+            >
+              <Text style={[styles.overlayText, { color: friend.color }]}>@{friend.name}</Text>
+            </Animated.View>
+          );
       })}
       {selectedHashtags.map((hashtag) => {
         const panResponder = createPanResponder(hashtag, 'hashtag');
+        const isSelected = selectedItem && selectedItem.id === hashtag.id && selectedItem.type === 'hashtag';
         return (
           <Animated.View
             key={hashtag.id}
             style={[
               styles.overlay,
+              isSelected && { backgroundColor: 'rgba(255, 255, 255, 0.5)' },
               {
                 transform: [
                   { translateX: hashtag.pan.x },
@@ -1083,8 +1202,12 @@ return (
               }
             ]}
             {...panResponder.panHandlers}
+             onTouchStart={(event) => {
+    event.stopPropagation();
+    setSelectedItem({ id: hashtag.id, type: 'hashtag' });
+  }}
           >
-            <Text style={styles.overlayText}>#{hashtag.title}</Text>
+            <Text style={[styles.overlayText, { color: hashtag.color }]}>#{hashtag.title}</Text>
           </Animated.View>
         );
       })}
@@ -1092,6 +1215,8 @@ return (
         <Animated.View
           style={[
             styles.overlay,
+            styles.locationOverlay, // New style for permanent background
+            selectedItem && selectedItem.type === 'location' && { backgroundColor: 'rgba(255, 255, 255, 0.5)' },
             {
               transform: [
                 { translateX: selectedLocation.pan.x },
@@ -1105,93 +1230,147 @@ return (
             }
           ]}
           {...createPanResponder(selectedLocation, 'location').panHandlers}
+          onTouchStart={(event) => {
+            event.stopPropagation();
+            setSelectedItem({ id: selectedLocation.id, type: 'location' });
+          }}
         >
-          <Text style={styles.overlayText}>{selectedLocation.placeName}</Text>
+          <View style={styles.locationContent}>
+            <Icon name="location" size={16} color={selectedLocation.color || '#FFFFFF'} />
+            <Text style={[styles.overlayText, { color: selectedLocation.color || '#FFFFFF' }]}>
+              {selectedLocation.placeName}
+            </Text>
+          </View>
         </Animated.View>
       )}
-     
-{pipImage && (
-  <Animated.View
-    style={[
-      styles.pipContainer,
-      {
-        transform: [
-          { translateX: pipImage.pan.x },
-          { translateY: pipImage.pan.y },
-          { scale: pipImage.scale },
-          { rotate: `${pipRotation}deg` },
-        ],
-        backgroundColor: pipBackgroundColor,
-        width: pipSize,
-        height: pipSize,
-        borderWidth: isPipSelected ? 2 : 0,
-        borderColor: isPipSelected ? 'white' : 'transparent',
-      }
-    ]}
-    {...createPanResponder(pipImage, 'pip').panHandlers}
-  >
-    <Animated.Image
-      source={{ uri: pipImage.uri }}
-      style={[
-        styles.pipImage,
-        { opacity: pipOpacity },
-        pipFlipped && { transform: [{ scaleX: -1 }] }
-      ]}
-    />
-    {isPipSelected && (
-      <>
-        <TouchableOpacity style={[styles.pipIcon, styles.pipDeleteIcon]} onPress={() => setPipImage(null)}>
-          <Icon name="close" size={20} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.pipIcon, styles.pipFlipIcon]} onPress={() => setPipFlipped(!pipFlipped)}>
-          <Icon2 name="flip-horizontal" size={20} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.pipIcon, styles.pipMenuIcon]} onPress={handlePipMenuPress}>
-          <Icon name="pencil" size={20} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.pipIcon, styles.pipZoomIcon]} onPress={handlePipZoomPress}>
-          <Icon2 name="arrow-expand" size={20} color="white" />
-        </TouchableOpacity>
-      </>
-    )}
-  </Animated.View>
-)}
-    {textElements.map((text) => {
-      const panResponder = createPanResponder(text, 'text');
-      const isEditing = editingTextId === text.id;
-      return (
+      {pipImage && (
         <Animated.View
-          key={text.id}
-          style={[
-            styles.overlay,
-            isEditing && styles.editingOverlay,
-            {
-              transform: [
-                { translateX: text.pan.x },
-                { translateY: text.pan.y },
-                { scale: text.scale },
-                { rotate: text.rotate.interpolate({
-                  inputRange: [0, 360],
-                  outputRange: ['0deg', '360deg']
-                })},
-              ]
-            }
-          ]}
-          {...panResponder.panHandlers}
-        >
-          <TextInput
-            style={[styles.overlayText, text.style]}
-            value={text.content}
-            onChangeText={(newContent) => handleEditText(text.id, newContent)}
-            onFocus={() => {
-              setSelectedTextId(text.id);
-              setEditingTextId(text.id);
-            }}
-            onBlur={() => setEditingTextId(null)}
+            style={[
+          styles.pipBackgroundContainer,
+          {
+            transform: [
+              { translateX: pipImage.pan.x },
+              { translateY: pipImage.pan.y },
+              { scale: pipImage.scale },
+              { rotate: `${pipRotation}deg` },
+            ],
+            backgroundColor: pipBackgroundColor,
+            width: pipSize.width,
+            height: pipSize.height,
+          }
+        ]}
+      >
+          <Animated.View
+            style={[
+              styles.pipContainer,
+              {
+                transform: [
+                  { scale: pipImage.scale },
+                  { rotate: pipImage.rotate.interpolate({
+                    inputRange: [0, 360],
+                    outputRange: ['0deg', '360deg']
+                  })},
+                ],
+                borderWidth: isPipTouched ? 2 : 0,
+                borderColor: isPipTouched ? 'white' : 'transparent',
+                width: pipSize.width+50,
+                height: pipSize.height +40,
+              },
+              
+            ]}
+            {...createPanResponder(pipImage, 'pip').panHandlers}
+          >
+          <Animated.Image
+            source={{ uri: pipImage.uri }}
+            style={[
+              styles.pipImage,
+              { opacity: pipOpacity },
+              pipFlipped && { transform: [{ scaleX: -1 }] }
+            ]}
           />
+          {isPipTouched && (
+            <>
+              <TouchableOpacity 
+                style={[styles.pipIcon, styles.pipDeleteIcon]} 
+                onPress={() => {
+                  setPipImage(null);
+                  setIsPipTouched(false);
+                }}
+              >
+                <Icon name="close" size={20} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.pipIcon, styles.pipFlipIcon]} 
+                onPress={() => setPipFlipped(!pipFlipped)}
+              >
+                <Icon2 name="flip-horizontal" size={20} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.pipIcon, styles.pipMenuIcon]} 
+                onPress={handlePipMenuPress}
+              >
+                <Icon name="pencil" size={20} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.pipIcon, styles.pipZoomIcon]} 
+                onPress={handlePipZoomPress}
+              >
+                <Icon2 name="arrow-expand" size={20} color="white" />
+              </TouchableOpacity>
+            </>
+          )}
         </Animated.View>
-      );
-    })}
+          </Animated.View>
+
+      )}
+      {textElements.map((text) => {
+        const panResponder = createPanResponder(text, 'text');
+        const isEditing = editingTextId === text.id;
+        return (
+          <Animated.View
+            key={text.id}
+            style={[
+              styles.overlay,
+              isEditing && styles.editingOverlay,
+              {
+                transform: [
+                  { translateX: text.pan.x },
+                  { translateY: text.pan.y },
+                  { scale: text.scale },
+                  { rotate: text.rotate.interpolate({
+                    inputRange: [0, 360],
+                    outputRange: ['0deg', '360deg']
+                  })},
+                ]
+              }
+            ]}
+            {...panResponder.panHandlers}
+          >
+            <TextInput
+              style={[styles.overlayText, text.style]}
+              value={text.content}
+              placeholder={text.placeholder}
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+              onChangeText={(newContent) => {
+                handleEditText(text.id, newContent);
+                // Remove placeholder when user starts typing
+                if (newContent && text.placeholder) {
+                  setTextElements(prevElements =>
+                    prevElements.map(el =>
+                      el.id === text.id ? { ...el, placeholder: null } : el
+                    )
+                  );
+                }
+              }}
+              onFocus={() => {
+                setSelectedTextId(text.id);
+                setEditingTextId(text.id);
+              }}
+              onBlur={() => setEditingTextId(null)}
+            />
+          </Animated.View>
+        );
+      })}
       {selectedStickers.map((sticker) => {
         const panResponder = createPanResponder(sticker, 'sticker');
         return (
@@ -1221,11 +1400,8 @@ return (
           </Animated.View>
         );
       })}
-   
     </View>
-      </TouchableWithoutFeedback>
-
- </ViewShot>
+    </ViewShot>
     <Modal
       visible={isFriendsListVisible}
       transparent={true}
@@ -1299,7 +1475,6 @@ return (
 />
         </View>
     </Modal>
-    
     {isStickerBarVisible && (
       <View style={styles.stickerBar}>
         {isLoadingStickers ? (
@@ -1330,7 +1505,6 @@ return (
         )}
       </View>
     )}
- 
     {isDropdownVisible && (
         <View style={styles.dropdown}>
           <TouchableOpacity style={styles.dropdownItem} onPress={handleSave}>
@@ -1340,40 +1514,39 @@ return (
             <Text>Draft</Text>
           </TouchableOpacity>
         </View>
-      )}
-<Modal visible={isColorPickerVisible} transparent={true}>
-  <View style={styles.colorPickerContainer}>
-    <ColorPicker
-      onColorChange={handleColorChange}
-      style={{flex: 1}}
-      color={selectedColor}
-    />
-    <TouchableOpacity 
-      style={styles.colorPickerDoneButton} 
-      onPress={() => setIsColorPickerVisible(false)}
-    >
-      <Text style={styles.colorPickerDoneButtonText}>Done</Text>
-    </TouchableOpacity>
-  </View>
-</Modal>
-    
-  {isTextDropdownVisible && (
-  <TextDropdown 
-    onTextStyle={handleTextStyle}
-    onColorSelect={handleColorSelect}
-  />
-)}
+    )}
+    <Modal visible={isColorPickerVisible} transparent={true}>
+      <View style={styles.colorPickerContainer}>
+        <ColorPicker
+          onColorChange={handleColorChange}
+          style={{flex: 1}}
+          color={selectedColor}
+        />
+        <TouchableOpacity 
+          style={styles.colorPickerDoneButton} 
+          onPress={() => setIsColorPickerVisible(false)}
+        >
+          <Text style={styles.colorPickerDoneButtonText}>Done</Text>
+        </TouchableOpacity>
+      </View>
+    </Modal>
+      {isTextDropdownVisible && (
+      <TextDropdown 
+        onTextStyle={handleTextStyle}
+        onColorSelect={handleColorSelect}
+      />
+       )}
       {isRecordingMenuVisible && (
         <RecordingMenu onClose={toggleRecordingMenu} />
       )}
-    
-<PreviewModal
-  isVisible={isPreviewVisible}
-  onClose={() => setIsPreviewVisible(false)}
-  mediaUri={previewImage}
-  isVideo={isVideo}
-  overlayElements={previewOverlayElements}
-/>
+    <PreviewModal
+      isVisible={isPreviewVisible}
+      onClose={() => setIsPreviewVisible(false)}
+      mediaUri={previewImage}
+      isVideo={isVideo}
+      overlayElements={previewOverlayElements}
+    />
+   
   </SafeAreaView>
 );
 };
@@ -1436,6 +1609,32 @@ friendContent: {
     height: hp('80%'),
     zIndex:2
   },
+  colorPanel: {
+    position: 'absolute',
+    bottom: hp('10%'),
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: 10,
+      zIndex: 1000,
+  },
+deleteZone: {
+  position: 'absolute',
+  width: 50,
+  height: 50,
+  borderRadius: 25,
+  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+  justifyContent: 'center',
+  alignItems: 'center',
+  zIndex: 1000,
+},
+  colorButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+  },
  overlay: {
     position: 'absolute',
     zIndex: 10,
@@ -1456,23 +1655,30 @@ friendContent: {
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  pipContainer: {
+   pipBackgroundContainer: {
+    width: ("100%"),
+    height: ("100%"),
     position: 'absolute',
-    borderWidth: 1,
-    borderColor: 'white',
-    padding: 10,
-    zIndex: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pipContainer: {
+    width: 200,
+    height: 300,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pipImage: {
+    width: ("100%"),
+    height: 160,
+    resizeMode: 'contain',
   },
    viewShot: {
     flex: 1,
     width: '100%',
     height: '100%',
   },
-  pipImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain',
-  },
+ 
   pipIcon: {
     position: 'absolute',
     width: 30,
@@ -1650,7 +1856,7 @@ friendContent: {
   textDropdown: {
   position: 'absolute',
   top: hp('50%'), // Adjust this value as needed
-  right: wp('15%'), // Adjust this value as needed
+  right: wp('10%'), // Adjust this value as needed
   backgroundColor: 'rgba(0, 0, 0, 0.8)',
   borderRadius: 15,
   padding: 10,
@@ -1661,7 +1867,7 @@ friendContent: {
   shadowOpacity: 0.25,
   shadowRadius: 3.84,
   zIndex: 1, // Ensure it's above other elements
-},
+  },
   textDropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1672,7 +1878,7 @@ friendContent: {
   },
   textDropdownItemText: {
     marginLeft: wp('4%'),
-    fontSize: 16,
+    fontSize: 12,
     color: '#fff',
     fontWeight: '500',
   },
@@ -1725,5 +1931,4 @@ previewModalContainer: {
     fontWeight: 'bold',
   },
 });
-
 export default EditingScreen;

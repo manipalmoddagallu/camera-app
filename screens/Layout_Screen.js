@@ -45,14 +45,14 @@ const Layout_Screen = ({ route }) => {
     setSelectedIndex(index);
   };
 
-  const handleNext = () => {
-    const imageToPass = selectedIndex === 0 ? imageUri : extractedUri.current;
-    navigation.navigate('EditingScreen', {
-      media: { uri: imageToPass, type: 'photo' },
-      filterIndex: selectedIndex,
-      originalImageUri: imageUri,
-    });
-  };
+const handleNext = () => {
+  const imageToPass = selectedIndex === 0 ? imageUri : extractedUri.current;
+  navigation.navigate('EditingScreen', {
+    media: { uri: imageToPass, type: 'photo' },
+    filterIndex: selectedIndex, // Make sure this is correct
+    originalImageUri: imageUri,
+  });
+};
 
   const renderFilterComponent = ({ item, index }) => {
     const FilterComponent = item.filterComponent;

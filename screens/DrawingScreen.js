@@ -1,12 +1,12 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { View, Image, StyleSheet, TouchableOpacity, PanResponder, ScrollView, Dimensions } from 'react-native';
+import React, { useState, useRef, useMemo } from 'react';
+import { View, Image, StyleSheet, TouchableOpacity, PanResponder, ScrollView, Dimensions, Alert } from 'react-native';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Icon2 from 'react-native-vector-icons/FontAwesome5';
 import Video from 'react-native-video';
 import Svg, { Path, Circle } from 'react-native-svg';
 import ViewShot from 'react-native-view-shot';
-import LayoutView from './Layouts/LayoutView'; // Assuming you have a LayoutView component
+import LayoutView from './Layouts/LayoutView';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -19,7 +19,6 @@ const DrawingScreen = ({ route, navigation }) => {
   const [eraserPosition, setEraserPosition] = useState(null);
   const videoRef = useRef();
   const viewShotRef = useRef(null);
-
 
   const ERASER_SIZE = 20;
 
@@ -37,6 +36,27 @@ const DrawingScreen = ({ route, navigation }) => {
 
   const colors = useMemo(() => generateColors(), []);
 
+const eraseAtPoint = (x, y) => {
+    setPaths(prevPaths => {
+      return prevPaths.map(path => {
+        const newPoints = path.points.filter((point, index) => {
+          if (index === 0 || typeof point !== 'string') return true;
+
+          const [cmd, coordsString] = point.split(/([ML])/).filter(Boolean);
+          if (!coordsString) return true;
+
+          const [px, py] = coordsString.split(',').map(Number);
+          if (isNaN(px) || isNaN(py)) return true;
+
+          const distance = Math.sqrt((x - px) ** 2 + (y - py) ** 2);
+          return distance > ERASER_SIZE;
+        });
+
+        return { ...path, points: newPoints };
+      }).filter(path => path.points.length > 1);
+    });
+  };
+
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
@@ -48,7 +68,7 @@ const DrawingScreen = ({ route, navigation }) => {
         setPaths(prevPaths => [...prevPaths, newPath]);
       } else if (mode === 'erase') {
         setEraserPosition({ x: locationX, y: locationY });
-        erasePaths(locationX, locationY);
+        eraseAtPoint(locationX, locationY);
       }
     },
     onPanResponderMove: (event) => {
@@ -64,7 +84,7 @@ const DrawingScreen = ({ route, navigation }) => {
         });
       } else if (mode === 'erase') {
         setEraserPosition({ x: locationX, y: locationY });
-        erasePaths(locationX, locationY);
+        eraseAtPoint(locationX, locationY);
       }
     },
     onPanResponderRelease: () => {
@@ -72,41 +92,6 @@ const DrawingScreen = ({ route, navigation }) => {
       setEraserPosition(null);
     },
   });
-
-  const erasePaths = (x, y) => {
-    setPaths(prevPaths => {
-      return prevPaths.map(path => {
-        const newPoints = splitPathAtIntersections(path.points, x, y);
-        return newPoints.length > 0 ? { ...path, points: newPoints } : null;
-      }).filter(Boolean);
-    });
-  };
-
-  const splitPathAtIntersections = (points, x, y) => {
-    let newPaths = [];
-    let currentPath = [];
-    
-    for (let i = 0; i < points.length; i++) {
-      const point = points[i];
-      const [cmd, coords] = [point[0], point.slice(1)];
-      const [px, py] = coords.split(',').map(Number);
-      
-      if (Math.hypot(x - px, y - py) > ERASER_SIZE) {
-        currentPath.push(point);
-      } else {
-        if (currentPath.length > 0) {
-          newPaths.push(currentPath);
-          currentPath = [];
-        }
-      }
-    }
-    
-    if (currentPath.length > 0) {
-      newPaths.push(currentPath);
-    }
-    
-    return newPaths.filter(path => path.length > 1).flat();
-  };
 
   const toggleMode = (newMode) => {
     setMode(newMode);
@@ -116,40 +101,49 @@ const DrawingScreen = ({ route, navigation }) => {
   const handleClear = () => {
     setPaths([]);
   };
-  const captureVideoFrame = async () => {
-    if (videoRef.current && viewShotRef.current) {
-      try {
-        const capturedFrame = await viewShotRef.current.capture();
-        setCurrentFrame(capturedFrame);
-      } catch (error) {
-        console.error('Error capturing video frame:', error);
-        Alert.alert('Error', 'Failed to capture video frame. Please try again.');
-      }
-    }
-  };
+
   const handleDone = async () => {
     try {
       if (mediaType === 'video') {
-        await captureVideoFrame();
+        const overlayUri = await viewShotRef.current.capture({
+          format: "png",
+          quality: 1,
+          result: "tmpfile",
+          transparent: true,
+        });
+        
+        navigation.navigate('EditingScreen', { 
+          media: { 
+            uri: image, // Original video URI
+            type: 'video',
+            overlay: overlayUri // URI of the captured drawing overlay
+          },
+          originalMedia: originalMedia
+        });
+      } else {
+        // Existing code for images and layouts
+        const uri = await viewShotRef.current.capture({
+          format: "png",
+          quality: 1,
+          result: "tmpfile",
+          transparent: true,
+          width: screenWidth,
+          height: screenHeight - hp('18%')
+        });
+        
+        navigation.navigate('EditingScreen', { 
+          editedImage: uri,
+          media: { uri: uri, type: mediaType },
+          originalMedia: originalMedia
+        });
       }
-
-     const uri = await viewShotRef.current.capture({
-  format: "png",
-  quality: 1,
-  result: "tmpfile",
-  transparent: true
-});
-      console.log('Captured edited image URI:', uri);
-      navigation.navigate('EditingScreen', { 
-        editedImage: uri,
-        media: { uri: uri, type: mediaType }
-      });
     } catch (error) {
       console.error('Error capturing image:', error);
       Alert.alert('Error', 'Failed to save the edited image.');
       navigation.goBack();
     }
   };
+
   const renderMedia = () => {
     switch (mediaType) {
       case 'video':
@@ -189,22 +183,22 @@ const DrawingScreen = ({ route, navigation }) => {
     <View style={styles.container}>
       <View style={styles.topToolbar}>
         <TouchableOpacity onPress={() => toggleMode('draw')} style={[styles.toolbarButton, mode === 'draw' && styles.activeButton]}>
-          <Icon name="brush" size={24} color={mode === 'draw' ? '#fff' : '#000'} />
+          <Icon name="brush" size={24} color={mode === 'draw' ? '#fff' : '#020E27'} />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => toggleMode('erase')} style={[styles.toolbarButton, mode === 'erase' && styles.activeButton]}>
-          <Icon2 name="eraser" size={24} color={mode === 'erase' ? '#fff' : '#000'} />
+          <Icon2 name="eraser" size={24} color={mode === 'erase' ? '#fff' : '#020E27'} />
         </TouchableOpacity>
         <TouchableOpacity onPress={handleClear} style={styles.toolbarButton}>
-          <Icon name="trash" size={24} color="#000" />
+          <Icon name="trash" size={24} color="#020E27" />
         </TouchableOpacity>
         <TouchableOpacity onPress={handleDone} style={styles.toolbarButton}>
-          <Icon name="checkmark" size={24} color="#000" />
+          <Icon name="checkmark" size={24} color="#020E27" />
         </TouchableOpacity>
       </View>
       <ViewShot ref={viewShotRef} style={styles.mediaContainer} options={{ format: "png", quality: 1 }}>
-        <View {...panResponder.panHandlers} style={StyleSheet.absoluteFill}>
+        <View {...panResponder.panHandlers} style={[StyleSheet.absoluteFill, styles.transparentBackground]}>
           {renderMedia()}
-          <Svg style={[StyleSheet.absoluteFill, { backgroundColor: 'transparent' }]}>
+          <Svg style={[StyleSheet.absoluteFill, styles.transparentBackground]}>
             {paths.map(path => (
               <Path
                 key={path.id}
@@ -266,7 +260,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   activeButton: {
-    backgroundColor: '#000',
+    backgroundColor: '#020E27',
   },
   colorBar: {
     height: hp('10%'),
@@ -282,7 +276,10 @@ const styles = StyleSheet.create({
   },
   selectedColor: {
     borderWidth: 2,
-    borderColor: '#000',
+    borderColor: '#020E27',
+  },
+  transparentBackground: {
+    backgroundColor: 'transparent',
   },
 });
 

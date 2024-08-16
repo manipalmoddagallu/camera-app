@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Image,
@@ -8,6 +8,7 @@ import {
   FlatList,
   Button,
   ImageBackground,
+  PanResponder,
 } from 'react-native';
 import {
   widthPercentageToDP as wp,
@@ -16,31 +17,52 @@ import {
 import {images} from './assets/images/image';
 import {COLOR, FONT, FONT_SIZE} from './utils/Config';
 import ImagePicker from 'react-native-image-crop-picker';
-import Svg, {Polygon, Defs, ClipPath} from 'react-native-svg';
 import {useNavigation} from '@react-navigation/native';
 import {LAYOUTS} from './utils/Layouts';
-
 const Layout = (props = ({route}) => {
-  const navigation = useNavigation();
+ const navigation = useNavigation();
   const selectedImages = route.params;
-  console.log('selectedImages', selectedImages);
   const [selectedLayoutIndex, setSelectedLayoutIndex] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedLayoutId, setSelectedLayoutId] = useState(null);
   const [layoutData, setLayoutData] = useState([]);
-
+  const [panResponders, setPanResponders] = useState({});
+  const [imagePositions, setImagePositions] = useState({});
+  const [imageScales, setImageScales] = useState({});
   console.log('layoutDatalayoutData', layoutData);
-
   useEffect(() => {
     const newLayoutIndex = selectedIndex;
     setSelectedLayoutIndex(newLayoutIndex);
   }, [selectedIndex]);
-
+  useEffect(() => {
+    // Initialize pan responders for each image
+    const newPanResponders = {};
+    layoutData.forEach(layout => {
+      layout.images.forEach(image => {
+        const key = `${layout.id}-${image.id}`;
+        newPanResponders[key] = PanResponder.create({
+          onStartShouldSetPanResponder: () => true,
+          onPanResponderMove: (evt, gestureState) => {
+            setImagePositions(prev => ({
+              ...prev,
+              [key]: {
+                x: (prev[key]?.x || 0) + gestureState.dx,
+                y: (prev[key]?.y || 0) + gestureState.dy,
+              },
+            }));
+          },
+          onPanResponderGrant: () => {
+            // Handle zoom here if needed
+          },
+        });
+      });
+    });
+    setPanResponders(newPanResponders);
+  }, [layoutData]);
   const toggleLayout = id => {
     setSelectedLayoutId(id);
   };
-
-  const getSelectedImage = (layoutId, tabId) => {
+ const getSelectedImage = (layoutId, tabId) => {
     const layout = layoutData.find(item => item.id === layoutId);
     if (layout) {
       const image = layout.images.find(img => img.id === tabId);
@@ -119,6 +141,41 @@ const Layout = (props = ({route}) => {
     }
   };
 
+  const renderImageContainer = (layoutId, tabId) => {
+    const key = `${layoutId}-${tabId}`;
+    const image = getSelectedImage(layoutId, tabId);
+    const position = imagePositions[key] || {x: 0, y: 0};
+    const scale = imageScales[key] || 1;
+
+    return (
+      <View style={styles.imageContainer}>
+        {image ? (
+          <View
+            {...panResponders[key]?.panHandlers}
+            style={[
+              styles.imageWrapper,
+              {
+                transform: [
+                  {translateX: position.x},
+                  {translateY: position.y},
+                  {scale: scale},
+                ],
+              },
+            ]}>
+            <Image source={{uri: image}} style={styles.image} />
+          </View>
+        ) : (
+          <TouchableOpacity
+            onPress={() => openImagePicker(layoutId, tabId)}
+            style={styles.addImageButton}>
+            <Text style={styles.addImageText}>+</Text>
+            <Text>Select Image</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.selectedLayoutContainer}>
@@ -128,17 +185,8 @@ const Layout = (props = ({route}) => {
               <TouchableOpacity
                 onPress={() => openImagePicker(selectedLayoutId, 1)}
                 style={styles.layout4ColView}>
-                {getSelectedImage(0, 1) ? (
-                  <Image
-                    source={{uri: getSelectedImage(0, 1)}}
-                    style={styles.ImagesView}
-                  />
-                ) : (
-                  <>
-                    <Text style={{fontSize: 25}}> + </Text>
-                    <Text>Select Image</Text>
-                  </>
-                )}
+                              {renderImageContainer(0, 1)}
+
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -1159,6 +1207,29 @@ const styles = StyleSheet.create({
     borderBottomWidth: hp('0.3%'),
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  imageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  imageWrapper: {
+    width: '100%',
+    height: '100%',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+  },
+  addImageButton: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addImageText: {
+    fontSize: 25,
   },
   touchView: {
     flex: 1,

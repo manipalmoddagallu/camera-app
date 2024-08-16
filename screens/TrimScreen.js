@@ -20,7 +20,6 @@ const TrimScreen = ({ route }) => {
   const [endTime, setEndTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef(null);
-
   useEffect(() => {
     if (currentTime >= endTime) {
       setIsPlaying(false);
@@ -54,19 +53,17 @@ const TrimScreen = ({ route }) => {
       setIsTrimming(false);
     }
   };
-
-  const handleDone = () => {
-    if (trimmedVideo) {
-      navigation.navigate('EditingScreen', {
-        trimmedVideo: { uri: trimmedVideo.uri, type: 'video' }
-      });
-    } else {
-      navigation.navigate('EditingScreen', {
-        media: video
-      });
-    }
-  };
-
+const handleDone = () => {
+  if (trimmedVideo) {
+    navigation.navigate('EditingScreen', {
+      trimmedVideo: trimmedVideo
+    });
+  } else {
+    navigation.navigate('EditingScreen', {
+      media: video
+    });
+  }
+};
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying);
     if (!isPlaying) {

@@ -58,29 +58,28 @@ const VideoCropScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleCrop = async () => {
-    setIsLoading(true);
-    try {
-      const cropRect = {
-        x: cropPosition.x,
-        y: cropPosition.y,
-        width: cropSize.width,
-        height: cropSize.height,
-      };
-      const croppedVideoPath = await cropVideo(video.uri, cropRect);
-      setIsLoading(false);
-      navigation.navigate('EditingScreen', { 
-        croppedVideo: { uri: croppedVideoPath },
-        originalVideo: video,
-        cropRect: cropRect,
-      });
-    } catch (error) {
-      setIsLoading(false);
-      console.error('Video cropping error:', error);
-      Alert.alert('Error', `Failed to crop video: ${error.message}`);
-    }
-  };
-
+const handleCrop = async () => {
+  setIsLoading(true);
+  try {
+    const cropRect = {
+      x: cropPosition.x,
+      y: cropPosition.y,
+      width: cropSize.width,
+      height: cropSize.height,
+    };
+    const croppedVideoPath = await cropVideo(video.uri, cropRect);
+    setIsLoading(false);
+    navigation.navigate('EditingScreen', { 
+      croppedVideo: { uri: croppedVideoPath },
+      originalVideo: video,
+      cropRect: cropRect,
+    });
+  } catch (error) {
+    setIsLoading(false);
+    console.error('Video cropping error:', error);
+    Alert.alert('Error', `Failed to crop video: ${error.message}`);
+  }
+};
   const onVideoLayout = (event) => {
     const { width, height } = event.nativeEvent.layout;
     setVideoLayout({ width, height });

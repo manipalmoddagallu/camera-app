@@ -186,20 +186,20 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   activeTab: {
-    borderBottomColor: '#000',
+    borderBottomColor: '#020E27',
   },
   tabText: {
-    color: '#000',
+    color: '#020E27',
     fontWeight: 'bold',
     fontSize: wp('4%'),
   },
   searchInput: {
     borderWidth: 1,
-    borderColor: '#000',
+    borderColor: '#020E27',
     borderRadius: wp('1%'),
     padding: wp('2.5%'),
     marginBottom: hp('1.5%'),
-    color: '#000',
+    color: '#020E27',
     fontSize: wp('4%'),
   },
   musicItem: {
@@ -212,10 +212,10 @@ const styles = StyleSheet.create({
   },
   musicTitle: {
     fontSize: wp('4%'),
-    color: '#000',
+    color: '#020E27',
   },
   playStopText: {
-    color: '#000',
+    color: '#020E27',
     fontWeight: 'bold',
     fontSize: wp('4%'),
   },

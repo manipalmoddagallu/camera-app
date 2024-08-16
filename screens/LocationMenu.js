@@ -51,16 +51,16 @@ const LocationMenu = ({ onSelectLocation, onClose }) => {
           onChangeText={setSearchText}
         />
         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Icon name="close" size={24} color="#000" />
+          <Icon name="close" size={24} color="#020E27" />
         </TouchableOpacity>
       </View>
       <View style={styles.quickAccessContainer}>
         <TouchableOpacity style={styles.quickAccessItem} onPress={() => handleLocationSelect({ placeName: 'Home' })}>
-          <Icon name="home" size={24} color="#000" />
+          <Icon name="home" size={24} color="#020E27" />
           <Text>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.quickAccessItem} onPress={() => handleLocationSelect({ placeName: 'Work' })}>
-          <Icon name="briefcase" size={24} color="#000" />
+          <Icon name="briefcase" size={24} color="#020E27" />
           <Text>Work</Text>
         </TouchableOpacity>
       </View>
@@ -69,7 +69,7 @@ const LocationMenu = ({ onSelectLocation, onClose }) => {
         keyExtractor={(item) => item.eLoc}
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.suggestionItem} onPress={() => handleLocationSelect(item)}>
-            <Text>{item.placeName}</Text>
+            <Text  style={styles.placeAddress1}>{item.placeName}</Text>
             <Text style={styles.placeAddress}>{item.placeAddress}</Text>
           </TouchableOpacity>
         )}
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    shadowColor: "#000",
+    shadowColor: "#020E27",
     shadowOffset: {
       width: 0,
       height: -2,
@@ -130,7 +130,11 @@ const styles = StyleSheet.create({
   },
   placeAddress: {
     fontSize: 12,
-    color: 'gray',
+    color: '#020E27',
+  },
+   placeAddress1: {
+    fontSize: 16,
+    color: '#020E27',
   },
 });
 

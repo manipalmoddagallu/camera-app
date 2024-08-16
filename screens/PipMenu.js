@@ -17,8 +17,8 @@ const PipMenu = ({
   setPipOpacity,
   pipRotation,
   setPipRotation,
-  pipBackgroundSize,
-  setPipBackgroundSize,
+  pipSize,
+  setPipSize,
   onClose,
 }) => {
   const rotateHandler = PanResponder.create({
@@ -30,10 +30,14 @@ const PipMenu = ({
     },
   });
 
+  const handleSizeChange = (value) => {
+    setPipSize({ width: value, height: value });
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Background</Text>
+        <Text style={styles.sectionTitle}>Background Color</Text>
         <ColorPicker
           color={pipBackgroundColor}
           onColorChange={setPipBackgroundColor}
@@ -43,15 +47,19 @@ const PipMenu = ({
           row={false}
           swatches={false}
         />
-        <Text style={styles.sliderLabel}>Background Size</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>PIP Size</Text>
         <Slider
           style={styles.slider}
           minimumValue={100}
-          maximumValue={200}
-          value={pipBackgroundSize}
-          onValueChange={setPipBackgroundSize}
+          maximumValue={300}
+          value={pipSize.width}
+          onValueChange={handleSizeChange}
         />
       </View>
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Image Opacity</Text>
         <Slider
@@ -62,12 +70,14 @@ const PipMenu = ({
           onValueChange={setPipOpacity}
         />
       </View>
+
       <TouchableOpacity
         style={styles.rotateButton}
         {...rotateHandler.panHandlers}
       >
         <Icon name="rotate-right" size={30} color="white" />
       </TouchableOpacity>
+
       <TouchableOpacity style={styles.closeButton} onPress={onClose}>
         <Text style={styles.closeButtonText}>Close</Text>
       </TouchableOpacity>

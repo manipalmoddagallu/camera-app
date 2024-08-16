@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, TouchableOpacity, StyleSheet, Text, ScrollView, TouchableWithoutFeedback, Alert,Animated } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Text, ScrollView, TouchableWithoutFeedback, Alert,Animated, Dimensions } from 'react-native';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Icon1 from 'react-native-vector-icons/FontAwesome';
@@ -8,6 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import Slider from '@react-native-community/slider';
 import { FILTERS } from './utils/Filters';
 import ImagePicker from 'react-native-image-crop-picker';
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const TopBar = ({ 
   onStickerPress, 
@@ -243,7 +244,7 @@ const FilterBar = () => {
 
   const scrollToFilter = (index) => {
     if (scrollViewRef.current) {
-      const xOffset = index * wp('25%');
+        const xOffset = index * (SCREEN_WIDTH * 0.25);
       scrollViewRef.current.scrollTo({ x: xOffset, animated: true });
     }
   };
@@ -284,8 +285,7 @@ const FilterBar = () => {
     </View>
   );
 };
-
-  return (
+return (
     <View style={styles.container}>
       <TouchableWithoutFeedback onPress={closeAllDropdowns}>
         <View>
@@ -298,11 +298,11 @@ const FilterBar = () => {
                   onPress={() => handleIconPress(icon)}
                 >
                   {icon.iconSet === 'Ionicons' ? (
-                    <Icon name={icon.name} size={24} color="#000" />
+                    <Icon name={icon.name} size={SCREEN_WIDTH * 0.06} color="#000" />
                   ) : icon.iconSet === 'FontAwesome' ? (
-                    <Icon1 name={icon.name} size={24} color="#000" />
+                    <Icon1 name={icon.name} size={SCREEN_WIDTH * 0.06} color="#000" />
                   ) : (
-                    <Icon2 name={icon.name} size={24} color="#000" />
+                    <Icon2 name={icon.name} size={SCREEN_WIDTH * 0.06} color="#000" />
                   )}
                   <Text style={styles.scrollBarText}>{icon.text}</Text>
                 </TouchableOpacity>
@@ -318,11 +318,11 @@ const FilterBar = () => {
 
           <View style={styles.bottomBar}>
             <TouchableOpacity style={styles.bottomBarItem} onPress={toggleScrollBar}>
-              <Icon1 name="edit" size={24} color="#000" />
+              <Icon1 name="edit" size={SCREEN_WIDTH * 0.06} color="#020E27" />
               <Text style={styles.bottomBarText}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.bottomBarItem} onPress={() => navigation.navigate('UploadScreen')}>
-              <Icon name="arrow-redo" size={24} color="#000" />
+              <Icon name="arrow-redo" size={SCREEN_WIDTH * 0.06} color="#020E27" />
               <Text style={styles.bottomBarText}>Share</Text>
             </TouchableOpacity>
           </View>
@@ -341,15 +341,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     zIndex: 2
   },
- scrollBar: {
-  backgroundColor: 'white',
-  paddingVertical: hp('1%'),
-  borderTopWidth: 1,
-  borderTopColor: '#eee',
-  borderWidth: 1,  // Add this line
-  borderColor: 'black',  // Add this line
-  borderRadius: 5,  // Add this line for rounded corners (optional)
-},
+  scrollBar: {
+    backgroundColor: 'white',
+    paddingVertical: SCREEN_HEIGHT * 0.01,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    borderWidth: 1,
+    borderColor: 'black',
+    borderRadius: 5,
+  },
   scrollBarContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -357,21 +357,21 @@ const styles = StyleSheet.create({
   scrollBarItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: wp('20%'),
-    marginHorizontal: wp('2%'),
+    width: SCREEN_WIDTH * 0.2,
+    marginHorizontal: SCREEN_WIDTH * 0.02,
   },
   scrollBarText: {
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: SCREEN_WIDTH * 0.03,
+    marginTop: SCREEN_HEIGHT * 0.005,
     textAlign: 'center',
-    fontWeight: 'bold', // Add this line
+    fontWeight: 'bold',
   },
   bottomBar: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
     backgroundColor: 'white',
-    paddingVertical: hp('2%'),
+    paddingVertical: SCREEN_HEIGHT * 0.02,
     borderTopWidth: 1,
     borderTopColor: '#eee',
   },
@@ -379,56 +379,56 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bottomBarText: {
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: SCREEN_WIDTH * 0.03,
+    marginTop: SCREEN_HEIGHT * 0.005,
   },
   adjustBar: {
     backgroundColor: 'white',
-    paddingVertical: hp('1%'),
-    paddingHorizontal: wp('4%'),
+    paddingVertical: SCREEN_HEIGHT * 0.01,
+    paddingHorizontal: SCREEN_WIDTH * 0.04,
     borderTopWidth: 1,
     borderTopColor: '#eee',
   },
   adjustmentSlider: {
     flexDirection: 'column',
     alignItems: 'stretch',
-    marginBottom: hp('2%'),
+    marginBottom: SCREEN_HEIGHT * 0.02,
   },
   adjustText: {
-    fontSize: 16,
-    marginBottom: hp('1%'),
+    fontSize: SCREEN_WIDTH * 0.04,
+    marginBottom: SCREEN_HEIGHT * 0.01,
     textAlign: 'center',
   },
   slider: {
-    width: wp('90%'),
-    height: 40,
+    width: SCREEN_WIDTH * 0.9,
+    height: SCREEN_HEIGHT * 0.05,
     alignSelf: 'center',
   },
   filterBarContainer: {
     backgroundColor: 'white',
-    paddingVertical: hp('1%'),
+    paddingVertical: SCREEN_HEIGHT * 0.01,
     borderTopWidth: 1,
     borderTopColor: '#eee',
-    height: hp('10%'),
+    height: SCREEN_HEIGHT * 0.1,
   },
   filterScrollBar: {
     flex: 1,
   },
   filterScrollBarContent: {
     alignItems: 'center',
-    paddingHorizontal: wp('2%'),
+    paddingHorizontal: SCREEN_WIDTH * 0.02,
   },
   filterItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: wp('25%'),
-    height: hp('8%'),
-    marginHorizontal: wp('1%'),
+    width: SCREEN_WIDTH * 0.25,
+    height: SCREEN_HEIGHT * 0.08,
+    marginHorizontal: SCREEN_WIDTH * 0.01,
     borderRadius: 10,
     backgroundColor: '#f0f0f0',
   },
   filterText: {
-    fontSize: 14,
+    fontSize: SCREEN_WIDTH * 0.035,
     fontWeight: '500',
     textAlign: 'center',
   },
@@ -440,5 +440,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
+
 
 export default TopBar;

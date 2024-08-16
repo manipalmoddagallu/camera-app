@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, FlatList ,ImageBackground} from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, FlatList, ImageBackground } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import AudioRecorderPlayer from 'react-native-audio-recorder-player';
+import RNFS from 'react-native-fs';
+
+const audioRecorderPlayer = new AudioRecorderPlayer();
 
 const RecordingMenu = ({ onClose }) => {
   const [isRecording, setIsRecording] = useState(false);
@@ -11,6 +15,7 @@ const RecordingMenu = ({ onClose }) => {
   const [playbackTimer, setPlaybackTimer] = useState(0);
   const [savedRecordings, setSavedRecordings] = useState([]);
   const [currentSection, setCurrentSection] = useState('record');
+  const [currentRecording, setCurrentRecording] = useState(null);
   const intervalRef = useRef(null);
 
   useEffect(() => {
@@ -24,15 +29,7 @@ const RecordingMenu = ({ onClose }) => {
       }, 1000);
     } else if (isPlaying) {
       intervalRef.current = setInterval(() => {
-        setPlaybackTimer((prevTimer) => {
-          if (prevTimer > 0) {
-            return prevTimer - 1;
-          } else {
-            clearInterval(intervalRef.current);
-            setIsPlaying(false);
-            return 0;
-          }
-        });
+        setPlaybackTimer((prevTimer) => prevTimer + 1);
       }, 1000);
     } else {
       clearInterval(intervalRef.current);
@@ -59,46 +56,107 @@ const RecordingMenu = ({ onClose }) => {
     }
   };
 
-  const toggleRecording = () => {
-    setIsRecording(!isRecording);
-    if (isRecording) {
-      // Stop recording logic here
-    } else {
-      // Start recording logic here
+  const getFilePath = (filename) => `${RNFS.DocumentDirectoryPath}/${filename}`;
+
+  const startRecording = async () => {
+    const filename = `recording_${Date.now()}.m4a`;
+    const filePath = getFilePath(filename);
+    try {
+      const result = await audioRecorderPlayer.startRecorder(filePath);
+      console.log('Recording started', result);
+      setIsRecording(true);
       setTimer(0);
-      setPlaybackTimer(0);
+      setCurrentRecording(null); // Reset current recording when starting a new one
+    } catch (error) {
+      console.error('Error starting recording:', error);
+    }
+  };
+
+  const stopRecording = async () => {
+    try {
+      const result = await audioRecorderPlayer.stopRecorder();
+      console.log('Recording stopped', result);
+      setIsRecording(false);
+      setCurrentRecording(result); // Set the current recording
+      return result; // This should be the file path
+    } catch (error) {
+      console.error('Error stopping recording:', error);
     }
   };
 
   const saveRecording = async () => {
-    const newRecording = {
-      id: Date.now(),
-      duration: timer,
-      filename: `recording_${Date.now()}.m4a`, // Assume this is the filename of the saved audio file
-    };
-    const updatedRecordings = [...savedRecordings, newRecording];
-    setSavedRecordings(updatedRecordings);
-    await saveSavedRecordings(updatedRecordings);
-    setIsRecording(false);
-    setTimer(0);
-    setPlaybackTimer(0);
-  };
-
-  const playRecording = () => {
-    if (isPlaying) {
-      // Stop playback
-      setIsPlaying(false);
-      setPlaybackTimer(timer);
-    } else {
-      // Start playback
-      setIsPlaying(true);
-      setPlaybackTimer(timer);
+    if (currentRecording) {
+      const filename = currentRecording.split('/').pop(); // Extract filename from path
+      const newRecording = {
+        id: Date.now(),
+        name: `Recording ${savedRecordings.length + 1}`,
+        date: new Date().toLocaleDateString(),
+        duration: timer,
+        filename: filename,
+      };
+      const updatedRecordings = [...savedRecordings, newRecording];
+      setSavedRecordings(updatedRecordings);
+      await saveSavedRecordings(updatedRecordings);
+      setTimer(0);
+      setPlaybackTimer(0);
+      setCurrentRecording(null); // Reset current recording after saving
     }
   };
 
-  const playSavedRecording = (id) => {
-    // Play saved recording logic here
-    console.log('Playing saved recording', id);
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
+  const playRecording = async () => {
+    if (isPlaying) {
+      // Stop playback
+      await audioRecorderPlayer.stopPlayer();
+      setIsPlaying(false);
+      setPlaybackTimer(0);
+    } else if (currentRecording) {
+      // Start playback of current recording
+      try {
+        const result = await audioRecorderPlayer.startPlayer(currentRecording);
+        console.log('Playing current recording', result);
+        setIsPlaying(true);
+        setPlaybackTimer(0);
+        
+        audioRecorderPlayer.addPlayBackListener((e) => {
+          if (e.currentPosition === e.duration) {
+            audioRecorderPlayer.stopPlayer();
+            setIsPlaying(false);
+            setPlaybackTimer(0);
+          } else {
+            setPlaybackTimer(Math.floor(e.currentPosition / 1000));
+          }
+        });
+      } catch (error) {
+        console.error('Error playing current recording:', error);
+      }
+    }
+  };
+
+  const playSavedRecording = async (id) => {
+    const recording = savedRecordings.find(r => r.id === id);
+    if (recording) {
+      try {
+        const filePath = getFilePath(recording.filename);
+        const fileExists = await RNFS.exists(filePath);
+        if (!fileExists) {
+          console.error('Audio file does not exist:', filePath);
+          // Inform the user that the file is missing
+          return;
+        }
+        const result = await audioRecorderPlayer.startPlayer(filePath);
+        console.log('Playing saved recording', result);
+      } catch (error) {
+        console.error('Error playing saved recording:', error);
+      }
+    }
   };
 
   const formatTime = (seconds) => {
@@ -106,7 +164,7 @@ const RecordingMenu = ({ onClose }) => {
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
-
+  
   return (
     <ImageBackground 
       source={require('./assets/images/BG.png')} // Replace with your image path
@@ -138,10 +196,18 @@ const RecordingMenu = ({ onClose }) => {
               <Icon name={isRecording ? 'stop' : 'mic'} size={40} color={isRecording ? 'red' : 'white'} />
             </TouchableOpacity>
             <Text style={styles.timer}>{formatTime(isPlaying ? playbackTimer : timer)}</Text>
-            <TouchableOpacity style={styles.playButton} onPress={playRecording}>
-              <Icon name={isPlaying ? 'pause' : 'play'} size={30} color="#fff" />
+            <TouchableOpacity 
+              style={[styles.playButton, !currentRecording && styles.disabledButton]} 
+              onPress={playRecording}
+              disabled={!currentRecording}
+            >
+              <Icon name={isPlaying ? 'pause' : 'play'} size={30} color={currentRecording ? '#fff' : '#888'} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.saveButton} onPress={saveRecording}>
+            <TouchableOpacity 
+              style={[styles.saveButton, !currentRecording && styles.disabledButton]}
+              onPress={saveRecording}
+              disabled={!currentRecording}
+            >
               <Text style={styles.saveButtonText}>Save</Text>
             </TouchableOpacity>
           </View>
@@ -151,7 +217,11 @@ const RecordingMenu = ({ onClose }) => {
             keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => (
               <View style={styles.savedItem}>
-                <Text style={styles.savedItemText}>{formatTime(item.duration)}</Text>
+                <View>
+                  <Text style={styles.savedItemName}>{item.name}</Text>
+                  <Text style={styles.savedItemDate}>{item.date}</Text>
+                  <Text style={styles.savedItemDuration}>{formatTime(item.duration)}</Text>
+                </View>
                 <TouchableOpacity onPress={() => playSavedRecording(item.id)}>
                   <Icon name="play" size={24} color="#fff" />
                 </TouchableOpacity>
@@ -248,9 +318,21 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.2)',
   },
-  savedItemText: {
+  savedItemName: {
     color: 'white',
     fontSize: wp('4%'),
+    fontWeight: 'bold',
+  },
+  savedItemDate: {
+    color: 'white',
+    fontSize: wp('3.5%'),
+  },
+  savedItemDuration: {
+    color: 'white',
+    fontSize: wp('3.5%'),
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
 });
 

@@ -5,11 +5,9 @@ import axios from 'axios';
 
 const StickerScreen = ({ onSelectSticker, onClose, currentMedia }) => {
   const [stickers, setStickers] = useState([]);
-
   useEffect(() => {
     fetchStickers();
   }, []);
-
   const fetchStickers = async () => {
     try {
       const response = await axios.get('https://socialmedia.digiatto.info/public/api/sticker');
@@ -18,13 +16,11 @@ const StickerScreen = ({ onSelectSticker, onClose, currentMedia }) => {
       console.error('Error fetching stickers:', error);
     }
   };
-
   const renderSticker = ({ item }) => (
     <TouchableOpacity onPress={() => onSelectSticker(item)}>
       <Image source={{ uri: item.image }} style={styles.stickerImage} />
     </TouchableOpacity>
   );
-
   return (
     <View style={styles.container}>
       <Image source={{ uri: currentMedia.uri }} style={styles.backgroundImage} />
