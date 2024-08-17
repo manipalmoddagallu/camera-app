@@ -534,18 +534,18 @@ const DeleteZone = ({ visible, position }) => {
     });
     setIsLocationMenuVisible(false);
   };
-  const handleAddFriend = (friend) => {
-    setSelectedFriends(prevFriends => [
-      ...prevFriends,
-      { 
-        ...friend, 
-        pan: new Animated.ValueXY(),
-        scale: new Animated.Value(1),
-        rotate: new Animated.Value(0)
-      }
-    ]);
-    setIsFriendsListVisible(false);
-  };
+const handleAddFriend = (friends) => {
+  setSelectedFriends(prevFriends => [
+    ...prevFriends,
+    ...friends.map(friend => ({
+      ...friend,
+      pan: new Animated.ValueXY(),
+      scale: new Animated.Value(1),
+      rotate: new Animated.Value(0)
+    }))
+  ]);
+  setIsFriendsListVisible(false);
+};
   const handleDraft = async () => {
   const draftData = {
     uri: currentMedia.uri,
@@ -723,7 +723,7 @@ const createPanResponder = (item, itemType) => {
         setIsMoving(false);
         setMovingItem(null);
         if (itemType === 'pip') {
-          setIsPipTouched(false);
+          setIsPipTouched(true);
         }
         lastDistance = 0;
         lastRotation = 0;
@@ -1243,86 +1243,92 @@ return (
           </View>
         </Animated.View>
       )}
-      {pipImage && (
-        <Animated.View
-            style={[
-          styles.pipBackgroundContainer,
-          {
-            transform: [
-              { translateX: pipImage.pan.x },
-              { translateY: pipImage.pan.y },
-              { scale: pipImage.scale },
-              { rotate: `${pipRotation}deg` },
-            ],
-            backgroundColor: pipBackgroundColor,
-            width: pipSize.width,
-            height: pipSize.height,
-          }
+{pipImage && (
+  <Animated.View
+    style={[
+      styles.pipContainerOuter,
+      {
+        transform: [
+          { translateX: pipImage.pan.x },
+          { translateY: pipImage.pan.y },
+          { scale: pipImage.scale },
+          { rotate: `${pipRotation}deg` },
+        ],
+        width: pipSize.width + 50,  // Larger container
+        height: pipSize.height + 40,
+         borderWidth: isPipTouched ? 2 : 0,
+        borderColor: isPipTouched ? 'white' : 'transparent',
+      }
+    ]}
+    {...createPanResponder(pipImage, 'pip').panHandlers}
+    onTouchStart={(event) => {
+      event.stopPropagation();
+      setIsPipTouched(true);
+    }}
+  >
+    <Animated.View
+      style={[
+        styles.pipBackgroundContainer,
+        {
+          backgroundColor: pipBackgroundColor,
+          width: pipSize.width,  // Smaller background
+          height: pipSize.height,
+        }
+      ]}
+    >
+      <Animated.Image
+        source={{ uri: pipImage.uri }}
+        style={[
+          styles.pipImage,
+          { opacity: pipOpacity },
+          pipFlipped && { transform: [{ scaleX: -1 }] }
         ]}
-      >
-          <Animated.View
-            style={[
-              styles.pipContainer,
-              {
-                transform: [
-                  { scale: pipImage.scale },
-                  { rotate: pipImage.rotate.interpolate({
-                    inputRange: [0, 360],
-                    outputRange: ['0deg', '360deg']
-                  })},
-                ],
-                borderWidth: isPipTouched ? 2 : 0,
-                borderColor: isPipTouched ? 'white' : 'transparent',
-                width: pipSize.width+50,
-                height: pipSize.height +40,
-              },
-              
-            ]}
-            {...createPanResponder(pipImage, 'pip').panHandlers}
-          >
-          <Animated.Image
-            source={{ uri: pipImage.uri }}
-            style={[
-              styles.pipImage,
-              { opacity: pipOpacity },
-              pipFlipped && { transform: [{ scaleX: -1 }] }
-            ]}
-          />
-          {isPipTouched && (
-            <>
-              <TouchableOpacity 
-                style={[styles.pipIcon, styles.pipDeleteIcon]} 
-                onPress={() => {
-                  setPipImage(null);
-                  setIsPipTouched(false);
-                }}
-              >
-                <Icon name="close" size={20} color="white" />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.pipIcon, styles.pipFlipIcon]} 
-                onPress={() => setPipFlipped(!pipFlipped)}
-              >
-                <Icon2 name="flip-horizontal" size={20} color="white" />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.pipIcon, styles.pipMenuIcon]} 
-                onPress={handlePipMenuPress}
-              >
-                <Icon name="pencil" size={20} color="white" />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.pipIcon, styles.pipZoomIcon]} 
-                onPress={handlePipZoomPress}
-              >
-                <Icon2 name="arrow-expand" size={20} color="white" />
-              </TouchableOpacity>
-            </>
-          )}
-        </Animated.View>
-          </Animated.View>
-
-      )}
+      />
+    </Animated.View>
+    
+    {isPipTouched && (
+      <>
+        <TouchableOpacity 
+          style={[styles.pipIcon, styles.pipDeleteIcon]} 
+          onPress={(event) => {
+            event.stopPropagation();
+            setPipImage(null);
+            setIsPipTouched(false);
+          }}
+        >
+          <Icon name="close" size={20} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.pipIcon, styles.pipFlipIcon]} 
+          onPress={(event) => {
+            event.stopPropagation();
+            setPipFlipped(!pipFlipped);
+          }}
+        >
+          <Icon2 name="flip-horizontal" size={20} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.pipIcon, styles.pipMenuIcon]} 
+          onPress={(event) => {
+            event.stopPropagation();
+            handlePipMenuPress();
+          }}
+        >
+          <Icon name="pencil" size={20} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.pipIcon, styles.pipZoomIcon]} 
+          onPress={(event) => {
+            event.stopPropagation();
+            handlePipZoomPress();
+          }}
+        >
+          <Icon2 name="arrow-expand" size={20} color="white" />
+        </TouchableOpacity>
+      </>
+    )}
+  </Animated.View>
+)}
       {textElements.map((text) => {
         const panResponder = createPanResponder(text, 'text');
         const isEditing = editingTextId === text.id;
@@ -1402,15 +1408,15 @@ return (
       })}
     </View>
     </ViewShot>
-    <Modal
-      visible={isFriendsListVisible}
-      transparent={true}
-      animationType="slide"
-    >
-      <View style={styles.modalContainer}>
-        <FriendsList onAddFriend={handleAddFriend} onClose={handleCloseFriendsList} />
-      </View>
-    </Modal>
+<Modal
+  visible={isFriendsListVisible}
+  transparent={true}
+  animationType="slide"
+>
+  <View style={styles.modalContainer}>
+    <FriendsList onAddFriend={handleAddFriend} onClose={handleCloseFriendsList} />
+  </View>
+</Modal>
     <Modal
       visible={isHashtagMenuVisible}
       transparent={true}
@@ -1608,6 +1614,13 @@ friendContent: {
     width: wp('100%'),    
     height: hp('80%'),
     zIndex:2
+  },
+    pipContainerOuter: {
+    position: 'absolute',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
   },
   colorPanel: {
     position: 'absolute',

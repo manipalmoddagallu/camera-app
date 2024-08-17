@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     paddingVertical: SCREEN_HEIGHT * 0.02,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: '#000',
   },
   bottomBarItem: {
     alignItems: 'center',

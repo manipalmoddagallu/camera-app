@@ -37,25 +37,35 @@ const DrawingScreen = ({ route, navigation }) => {
   const colors = useMemo(() => generateColors(), []);
 
 const eraseAtPoint = (x, y) => {
-    setPaths(prevPaths => {
-      return prevPaths.map(path => {
-        const newPoints = path.points.filter((point, index) => {
-          if (index === 0 || typeof point !== 'string') return true;
+  setPaths(prevPaths => {
+    return prevPaths.map(path => {
+      const newPoints = [];
+      let isDrawing = false;
 
-          const [cmd, coordsString] = point.split(/([ML])/).filter(Boolean);
-          if (!coordsString) return true;
+      for (let i = 0; i < path.points.length; i++) {
+        const point = path.points[i];
+        const [cmd, coordsString] = point.split(/([ML])/).filter(Boolean);
+        const [px, py] = coordsString.split(',').map(Number);
 
-          const [px, py] = coordsString.split(',').map(Number);
-          if (isNaN(px) || isNaN(py)) return true;
+        const distance = Math.sqrt((x - px) ** 2 + (y - py) ** 2);
 
-          const distance = Math.sqrt((x - px) ** 2 + (y - py) ** 2);
-          return distance > ERASER_SIZE;
-        });
+        if (distance > ERASER_SIZE / 2) {
+          if (!isDrawing) {
+            newPoints.push(`M${px},${py}`);
+            isDrawing = true;
+          } else if (cmd === 'L') {
+            newPoints.push(`L${px},${py}`);
+          }
+        } else {
+          isDrawing = false;
+        }
+      }
 
-        return { ...path, points: newPoints };
-      }).filter(path => path.points.length > 1);
-    });
-  };
+      return { ...path, points: newPoints };
+    }).filter(path => path.points.length > 1);
+  });
+};
+
 
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,

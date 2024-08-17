@@ -8,17 +8,25 @@ import { PanGestureHandler } from 'react-native-gesture-handler';
 
 const FriendsList = ({ onAddFriend, onClose }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [addedFriends, setAddedFriends] = useState([]);
+  const [selectedFriends, setSelectedFriends] = useState([]);
 
   const filteredFriends = friendsData.filter(friend =>
     friend.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleAddFriend = (friend) => {
-    if (!addedFriends.includes(friend.id)) {
-      onAddFriend(friend);
-      setAddedFriends([...addedFriends, friend.id]);
-    }
+  const handleToggleFriend = (friend) => {
+    setSelectedFriends(prevSelected => {
+      if (prevSelected.some(f => f.id === friend.id)) {
+        return prevSelected.filter(f => f.id !== friend.id);
+      } else {
+        return [...prevSelected, friend];
+      }
+    });
+  };
+
+  const handleAddSelectedFriends = () => {
+    onAddFriend(selectedFriends);
+    onClose();
   };
 
   const handleGestureEvent = (event) => {
@@ -34,7 +42,7 @@ const FriendsList = ({ onAddFriend, onClose }) => {
         style={styles.backgroundImage}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Add Friends</Text>
+          <Text style={styles.title}>Plug In Friends</Text>
           <TouchableOpacity onPress={onClose}>
             <Icon name="times" size={24} color="#000" />
           </TouchableOpacity>
@@ -52,18 +60,23 @@ const FriendsList = ({ onAddFriend, onClose }) => {
           data={filteredFriends}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.friendItem} onPress={() => handleAddFriend(item)}>
+            <TouchableOpacity style={styles.friendItem} onPress={() => handleToggleFriend(item)}>
               <Text style={styles.friendName}>
-                {addedFriends.includes(item.id) ? `${item.name} (Added)` : item.name}
+                {item.name}
               </Text>
-              {!addedFriends.includes(item.id) && (
-                <View style={styles.addButton}>
-                  <Text style={styles.addButtonText}>Add</Text>
-                </View>
-              )}
+              <View style={styles.addButton}>
+                <Text style={styles.addButtonText}>
+                  {selectedFriends.some(f => f.id === item.id) ? 'Selected' : 'Select'}
+                </Text>
+              </View>
             </TouchableOpacity>
           )}
         />
+        <TouchableOpacity style={styles.addSelectedButton} onPress={handleAddSelectedFriends}>
+          <Text style={styles.addSelectedButtonText}>
+            Add Selected ({selectedFriends.length})
+          </Text>
+        </TouchableOpacity>
       </ImageBackground>
     </PanGestureHandler>
   );
@@ -136,6 +149,20 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: 'white',
     fontSize: wp('3.5%'),
+  },
+  addSelectedButton: {
+    backgroundColor: '#4a9c2d',
+    borderRadius: wp('2%'),
+    paddingVertical: hp('1.5%'),
+    paddingHorizontal: wp('5%'),
+    marginHorizontal: wp('5%'),
+    marginTop: hp('2%'),
+    alignItems: 'center',
+  },
+  addSelectedButtonText: {
+    color: 'white',
+    fontSize: wp('4%'),
+    fontWeight: 'bold',
   },
 });
 
