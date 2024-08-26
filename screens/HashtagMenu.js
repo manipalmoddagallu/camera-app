@@ -42,7 +42,7 @@ const HashtagMenu = ({ onSelectHashtag, onClose }) => {
         <View style={styles.header}>
           <Text style={styles.title}>Add Hashtags</Text>
           <TouchableOpacity onPress={onClose}>
-            <Icon name="close" size={24} color="#000" />
+            <Icon name="close" size={24} color="#020E27" />
           </TouchableOpacity>
         </View>
         <TextInput
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 122, 255, 0.7)',
   },
   hashtagText: {
-    color: '#000',
+    color: '#020E27',
   },
   doneButton: {
     padding: 10,

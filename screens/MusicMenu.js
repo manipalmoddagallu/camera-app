@@ -6,15 +6,13 @@ import axios from 'axios';
 import { getAll, SortSongFields, SortSongOrder } from 'react-native-get-music-files';
 import Sound from 'react-native-sound';
 
-const MusicMenu = ({ isVisible, onClose, onSelectMusic }) => {
+const MusicMenu = ({ isVisible, onClose, onSelectMusic, currentSound, setCurrentSound }) => {
   const [activeTab, setActiveTab] = useState('device');
   const [deviceMusic, setDeviceMusic] = useState([]);
   const [onlineMusic, setOnlineMusic] = useState([]);
   const [searchText, setSearchText] = useState('');
   const [filteredMusic, setFilteredMusic] = useState([]);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentSound, setCurrentSound] = useState(null);
-
   useEffect(() => {
     if (activeTab === 'device') {
       fetchDeviceMusic();
@@ -22,11 +20,9 @@ const MusicMenu = ({ isVisible, onClose, onSelectMusic }) => {
       fetchOnlineMusic();
     }
   }, [activeTab]);
-
   useEffect(() => {
     filterMusic();
   }, [searchText, deviceMusic, onlineMusic]);
-
   const fetchDeviceMusic = async () => {
     try {
       const songs = await getAll({
@@ -40,7 +36,6 @@ const MusicMenu = ({ isVisible, onClose, onSelectMusic }) => {
       console.error('Error fetching device music:', error);
     }
   };
-
   const fetchOnlineMusic = async () => {
     try {
       const response = await axios.get('https://socialmedia.digiatto.info/public/api/music');
@@ -49,7 +44,6 @@ const MusicMenu = ({ isVisible, onClose, onSelectMusic }) => {
       console.error('Error fetching online music:', error);
     }
   };
-
   const filterMusic = () => {
     const musicList = activeTab === 'device' ? deviceMusic : onlineMusic;
     const filtered = musicList.filter(music =>
@@ -57,7 +51,6 @@ const MusicMenu = ({ isVisible, onClose, onSelectMusic }) => {
     );
     setFilteredMusic(filtered);
   };
-
   const playMusic = (music) => {
     if (currentSound) {
       currentSound.stop();
@@ -79,29 +72,31 @@ const MusicMenu = ({ isVisible, onClose, onSelectMusic }) => {
       setIsPlaying(true);
     });
   };
-
-  const stopMusic = () => {
+ const stopMusic = () => {
     if (currentSound) {
       currentSound.stop();
       setIsPlaying(false);
     }
   };
-
-  const renderMusicItem = ({ item }) => (
+const renderMusicItem = ({ item }) => (
+  <View style={styles.musicItem}>
     <TouchableOpacity
-      style={styles.musicItem}
+      style={styles.musicTitleContainer}
       onPress={() => {
         onSelectMusic(item);
         onClose();
       }}
     >
       <Text style={styles.musicTitle}>{item.title}</Text>
-      <TouchableOpacity onPress={() => isPlaying ? stopMusic() : playMusic(item)}>
-        <Text style={styles.playStopText}>{isPlaying ? 'Stop' : 'Play'}</Text>
-      </TouchableOpacity>
     </TouchableOpacity>
-  );
-
+    <TouchableOpacity 
+      style={styles.playStopButton}
+      onPress={() => isPlaying ? stopMusic() : playMusic(item)}
+    >
+      <Text style={styles.playStopText}>{isPlaying ? 'Stop' : 'Play'}</Text>
+    </TouchableOpacity>
+  </View>
+);
   return (
     <Modal
       isVisible={isVisible}

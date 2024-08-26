@@ -1013,7 +1013,7 @@ const Layout = (props = ({route}) => {
                     onPress={() => toggleLayout(item.id)}
                     style={{
                       borderColor:
-                        selectedLayoutId === item.id ? '#fff' : '#000',
+                        selectedLayoutId === item.id ? '#fff' : '#020E27',
                       backgroundColor:
                         selectedLayoutId === item.id ? COLOR.GREEN : 'transparent',
                     }}>

@@ -16,6 +16,7 @@ const RecordingMenu = ({ onClose }) => {
   const [savedRecordings, setSavedRecordings] = useState([]);
   const [currentSection, setCurrentSection] = useState('record');
   const [currentRecording, setCurrentRecording] = useState(null);
+  const [playingId, setPlayingId] = useState(null);
   const intervalRef = useRef(null);
 
   useEffect(() => {
@@ -140,7 +141,7 @@ const RecordingMenu = ({ onClose }) => {
     }
   };
 
-  const playSavedRecording = async (id) => {
+const playSavedRecording = async (id) => {
     const recording = savedRecordings.find(r => r.id === id);
     if (recording) {
       try {
@@ -151,8 +152,28 @@ const RecordingMenu = ({ onClose }) => {
           // Inform the user that the file is missing
           return;
         }
-        const result = await audioRecorderPlayer.startPlayer(filePath);
-        console.log('Playing saved recording', result);
+
+        if (playingId === id) {
+          // If the same recording is clicked, stop playback
+          await audioRecorderPlayer.stopPlayer();
+          setPlayingId(null);
+        } else {
+          // If a different recording is clicked or no recording is playing
+          if (playingId !== null) {
+            // Stop the currently playing recording
+            await audioRecorderPlayer.stopPlayer();
+          }
+          const result = await audioRecorderPlayer.startPlayer(filePath);
+          console.log('Playing saved recording', result);
+          setPlayingId(id);
+
+          audioRecorderPlayer.addPlayBackListener((e) => {
+            if (e.currentPosition === e.duration) {
+              audioRecorderPlayer.stopPlayer();
+              setPlayingId(null);
+            }
+          });
+        }
       } catch (error) {
         console.error('Error playing saved recording:', error);
       }
@@ -215,18 +236,22 @@ const RecordingMenu = ({ onClose }) => {
           <FlatList
             data={savedRecordings}
             keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => (
-              <View style={styles.savedItem}>
-                <View>
-                  <Text style={styles.savedItemName}>{item.name}</Text>
-                  <Text style={styles.savedItemDate}>{item.date}</Text>
-                  <Text style={styles.savedItemDuration}>{formatTime(item.duration)}</Text>
-                </View>
-                <TouchableOpacity onPress={() => playSavedRecording(item.id)}>
-                  <Icon name="play" size={24} color="#fff" />
-                </TouchableOpacity>
-              </View>
-            )}
+renderItem={({ item }) => (
+        <View style={styles.savedItem}>
+          <View>
+            <Text style={styles.savedItemName}>{item.name}</Text>
+            <Text style={styles.savedItemDate}>{item.date}</Text>
+            <Text style={styles.savedItemDuration}>{formatTime(item.duration)}</Text>
+          </View>
+          <TouchableOpacity onPress={() => playSavedRecording(item.id)}>
+            <Icon 
+              name={playingId === item.id ? "pause" : "play"} 
+              size={24} 
+              color="#fff" 
+            />
+          </TouchableOpacity>
+        </View>
+      )}
           />
         )}
       </View>

@@ -89,9 +89,15 @@ const CameraScreen = ({ navigation }) => {
       Alert.alert('Error', 'Failed to request permissions. Please try again.');
     }
   };
-   const handleGalleryImageSelect = (imageUri) => {
-  console.log('Image selected in CameraScreen:', imageUri);
-  navigation.navigate('Layout_Screen', { selectedImage: imageUri });
+const handleGalleryImageSelect = (mediaUri, selectedItem, mediaType) => {
+  console.log('Media selected in CameraScreen:', mediaUri, mediaType);
+  if (mediaType.startsWith('video')) {
+    navigation.navigate('EditingScreen', { 
+      media: { uri: mediaUri, type: 'video' }
+    });
+  } else {
+    navigation.navigate('Layout_Screen', { selectedImage: mediaUri });
+  }
 };
 
   const requestCameraPermission = async () => {
@@ -594,11 +600,11 @@ const navigateToEditingScreen = (videoPath) => {
           </TouchableWithoutFeedback>
         </Modal>
         
-        <GalleryMenu
-    isVisible={isGalleryMenuVisible}
-    onClose={() => setIsGalleryMenuVisible(false)}
-    onImageSelect={handleGalleryImageSelect}
-  />
+<GalleryMenu
+  isVisible={isGalleryMenuVisible}
+  onClose={() => setIsGalleryMenuVisible(false)}
+  onImageSelect={handleGalleryImageSelect}
+/>
       </View>
     </TouchableWithoutFeedback>
   );

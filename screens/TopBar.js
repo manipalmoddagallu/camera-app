@@ -29,7 +29,7 @@ const TopBar = ({
   sharpnessValue,
   onSharpnessChange,
   saturationValue,
-  onSaturationChange
+  onSaturationChange,
 }) => {
   const navigation = useNavigation();
   const [isScrollBarVisible, setIsScrollBarVisible] = useState(false);
@@ -156,8 +156,8 @@ const TopBar = ({
               maximumValue={2}
               value={contrastValue}
               onValueChange={onContrastChange}
-              minimumTrackTintColor="#000000"
-              maximumTrackTintColor="#000000"
+              minimumTrackTintColor="#020E27"
+              maximumTrackTintColor="#020E27"
             />
           </View>
         );
@@ -239,19 +239,25 @@ const TopBar = ({
     }
   };
 
-const FilterBar = () => {
+const FilterBar = ({ selectedFilter, onSelectFilter }) => {
   const scrollViewRef = useRef(null);
+
+  useEffect(() => {
+    if (scrollViewRef.current && selectedFilter) {
+      const index = FILTERS.findIndex(filter => filter === selectedFilter);
+      scrollToFilter(index);
+    }
+  }, [selectedFilter]);
 
   const scrollToFilter = (index) => {
     if (scrollViewRef.current) {
-        const xOffset = index * (SCREEN_WIDTH * 0.25);
+      const xOffset = Math.min(index * (SCREEN_WIDTH * 0.25), (FILTERS.length - 4) * (SCREEN_WIDTH * 0.25));
       scrollViewRef.current.scrollTo({ x: xOffset, animated: true });
     }
   };
 
-  const handleFilterSelect = (filter, index) => {
+  const handleFilterSelect = (filter) => {
     onSelectFilter(filter);
-    scrollToFilter(index);
   };
 
   return (
@@ -263,8 +269,11 @@ const FilterBar = () => {
         contentContainerStyle={styles.filterScrollBarContent}
         showsHorizontalScrollIndicator={false}
         decelerationRate="fast"
-        snapToInterval={wp('25%')}
+        snapToInterval={SCREEN_WIDTH * 0.25}
         snapToAlignment="center"
+        snapToOffsets={FILTERS.map((_, index) => index * (SCREEN_WIDTH * 0.25))}
+        scrollEventThrottle={16}
+        pagingEnabled={false}
       >
         {FILTERS.map((filter, index) => (
           <TouchableOpacity
@@ -273,7 +282,7 @@ const FilterBar = () => {
               styles.filterItem,
               selectedFilter === filter && styles.selectedFilterItem
             ]}
-            onPress={() => handleFilterSelect(filter, index)}
+            onPress={() => handleFilterSelect(filter)}
           >
             <Text style={[
               styles.filterText,
@@ -298,11 +307,11 @@ return (
                   onPress={() => handleIconPress(icon)}
                 >
                   {icon.iconSet === 'Ionicons' ? (
-                    <Icon name={icon.name} size={SCREEN_WIDTH * 0.06} color="#000" />
+                    <Icon name={icon.name} size={SCREEN_WIDTH * 0.06} color="#020E27" />
                   ) : icon.iconSet === 'FontAwesome' ? (
-                    <Icon1 name={icon.name} size={SCREEN_WIDTH * 0.06} color="#000" />
+                    <Icon1 name={icon.name} size={SCREEN_WIDTH * 0.06} color="#020E27" />
                   ) : (
-                    <Icon2 name={icon.name} size={SCREEN_WIDTH * 0.06} color="#000" />
+                    <Icon2 name={icon.name} size={SCREEN_WIDTH * 0.06} color="#020E27" />
                   )}
                   <Text style={styles.scrollBarText}>{icon.text}</Text>
                 </TouchableOpacity>
@@ -314,8 +323,12 @@ return (
               {renderAdjustmentBar()}
             </View>
           )}
-          {isFilterBarVisible && <FilterBar />}
-
+  {isFilterBarVisible && (
+            <FilterBar 
+              selectedFilter={selectedFilter} 
+              onSelectFilter={onSelectFilter} 
+            />
+          )}
           <View style={styles.bottomBar}>
             <TouchableOpacity style={styles.bottomBarItem} onPress={toggleScrollBar}>
               <Icon1 name="edit" size={SCREEN_WIDTH * 0.06} color="#020E27" />
@@ -373,14 +386,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     paddingVertical: SCREEN_HEIGHT * 0.02,
     borderTopWidth: 1,
-    borderTopColor: '#000',
+    borderTopColor: '#020E27',
   },
   bottomBarItem: {
     alignItems: 'center',
   },
   bottomBarText: {
-    fontSize: SCREEN_WIDTH * 0.03,
+    fontSize: 14,
     marginTop: SCREEN_HEIGHT * 0.005,
+    fontWeight: "bold"
   },
   adjustBar: {
     backgroundColor: 'white',

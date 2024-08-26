@@ -44,7 +44,7 @@ const FriendsList = ({ onAddFriend, onClose }) => {
         <View style={styles.header}>
           <Text style={styles.title}>Plug In Friends</Text>
           <TouchableOpacity onPress={onClose}>
-            <Icon name="times" size={24} color="#000" />
+            <Icon name="times" size={24} color="#020E27" />
           </TouchableOpacity>
         </View>
         <View style={styles.searchBarContainer}>
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: wp('5%'),
     borderTopRightRadius: wp('5%'),
     overflow: 'hidden',
-    shadowColor: "#000",
+    shadowColor: "#020E27",
     shadowOffset: {
       width: 0,
       height: -2,
@@ -133,12 +133,12 @@ const styles = StyleSheet.create({
     paddingVertical: hp('1.5%'),
     paddingHorizontal: wp('5%'),
     borderBottomWidth: 1,
-    borderBottomColor: '#000',
+    borderBottomColor: '#020E27',
   },
   friendName: {
     fontSize: wp('4%'),
     flex: 1,
-    color: '#000'
+    color: '#020E27'
   },
   addButton: {
     backgroundColor: '#4a9c2d',

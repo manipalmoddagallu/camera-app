@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, PanResponder, ScrollView, Dimensions, Alert } from 'react-native';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -15,11 +15,10 @@ const DrawingScreen = ({ route, navigation }) => {
   const [paths, setPaths] = useState([]);
   const [currentPath, setCurrentPath] = useState(null);
   const [mode, setMode] = useState('draw');
-  const [currentColor, setCurrentColor] = useState('#000000');
+  const [currentColor, setCurrentColor] = useState('#020E27');
   const [eraserPosition, setEraserPosition] = useState(null);
   const videoRef = useRef();
   const viewShotRef = useRef(null);
-
   const ERASER_SIZE = 20;
 
   const generateColors = () => {
@@ -36,102 +35,151 @@ const DrawingScreen = ({ route, navigation }) => {
 
   const colors = useMemo(() => generateColors(), []);
 
-const eraseAtPoint = (x, y) => {
+const eraseAtPoint = useCallback((x1, y1, x2, y2) => {
   setPaths(prevPaths => {
-    return prevPaths.map(path => {
-      const newPoints = [];
-      let isDrawing = false;
+    try {
+      return prevPaths.flatMap(path => {
+        let newPaths = [];
+        let currentPath = [];
+        let isDrawing = false;
 
-      for (let i = 0; i < path.points.length; i++) {
-        const point = path.points[i];
-        const [cmd, coordsString] = point.split(/([ML])/).filter(Boolean);
-        const [px, py] = coordsString.split(',').map(Number);
+        for (let i = 0; i < path.points.length; i++) {
+          const point = path.points[i];
+          const [cmd, coordsString] = point.split(/([ML])/).filter(Boolean);
+          const [px, py] = coordsString.split(',').map(Number);
 
-        const distance = Math.sqrt((x - px) ** 2 + (y - py) ** 2);
+          // Check if the point is close to the line segment between (x1, y1) and (x2, y2)
+          const distance = distanceToLineSegment(px, py, x1, y1, x2, y2);
 
-        if (distance > ERASER_SIZE / 2) {
-          if (!isDrawing) {
-            newPoints.push(`M${px},${py}`);
-            isDrawing = true;
-          } else if (cmd === 'L') {
-            newPoints.push(`L${px},${py}`);
+          if (distance > ERASER_SIZE / 2) {
+            if (!isDrawing) {
+              currentPath = [`M${px},${py}`];
+              isDrawing = true;
+            } else {
+              currentPath.push(`L${px},${py}`);
+            }
+          } else {
+            if (isDrawing) {
+              if (currentPath.length > 1) {
+                newPaths.push({ ...path, points: currentPath });
+              }
+              currentPath = [];
+              isDrawing = false;
+            }
           }
-        } else {
-          isDrawing = false;
         }
-      }
 
-      return { ...path, points: newPoints };
-    }).filter(path => path.points.length > 1);
+        if (currentPath.length > 1) {
+          newPaths.push({ ...path, points: currentPath });
+        }
+
+        return newPaths;
+      });
+    } catch (error) {
+      console.error('Error in eraseAtPoint:', error);
+      return prevPaths;
+    }
   });
+}, [ERASER_SIZE]);
+
+// Helper function to calculate distance from a point to a line segment
+const distanceToLineSegment = (x, y, x1, y1, x2, y2) => {
+  const A = x - x1;
+  const B = y - y1;
+  const C = x2 - x1;
+  const D = y2 - y1;
+
+  const dot = A * C + B * D;
+  const len_sq = C * C + D * D;
+  let param = -1;
+  if (len_sq !== 0) param = dot / len_sq;
+
+  let xx, yy;
+
+  if (param < 0) {
+    xx = x1;
+    yy = y1;
+  } else if (param > 1) {
+    xx = x2;
+    yy = y2;
+  } else {
+    xx = x1 + param * C;
+    yy = y1 + param * D;
+  }
+
+  const dx = x - xx;
+  const dy = y - yy;
+  return Math.sqrt(dx * dx + dy * dy);
 };
 
+  const debouncedEraseAtPoint = useCallback(
+    debounce((x, y) => eraseAtPoint(x, y), 16),
+    [eraseAtPoint]
+  );
 
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: (event) => {
-      const { locationX, locationY } = event.nativeEvent;
-      if (mode === 'draw') {
-        const newPath = { id: Date.now(), points: [`M${locationX},${locationY}`], color: currentColor };
-        setCurrentPath(newPath);
-        setPaths(prevPaths => [...prevPaths, newPath]);
-      } else if (mode === 'erase') {
-        setEraserPosition({ x: locationX, y: locationY });
-        eraseAtPoint(locationX, locationY);
-      }
-    },
-    onPanResponderMove: (event) => {
-      const { locationX, locationY } = event.nativeEvent;
-      if (mode === 'draw' && currentPath) {
-        setCurrentPath(prevPath => {
-          const newPath = { 
-            ...prevPath, 
-            points: [...prevPath.points, `L${locationX},${locationY}`] 
-          };
-          setPaths(prevPaths => prevPaths.map(p => p.id === prevPath.id ? newPath : p));
-          return newPath;
-        });
-      } else if (mode === 'erase') {
-        setEraserPosition({ x: locationX, y: locationY });
-        eraseAtPoint(locationX, locationY);
-      }
-    },
-    onPanResponderRelease: () => {
-      setCurrentPath(null);
-      setEraserPosition(null);
-    },
-  });
+const panResponder = useMemo(() => PanResponder.create({
+  onStartShouldSetPanResponder: () => true,
+  onMoveShouldSetPanResponder: () => true,
+  onPanResponderGrant: (event) => {
+    const { locationX, locationY } = event.nativeEvent;
+    if (mode === 'draw') {
+      const newPath = { id: Date.now(), points: [`M${locationX},${locationY}`], color: currentColor };
+      setCurrentPath(newPath);
+      setPaths(prevPaths => [...prevPaths, newPath]);
+    } else if (mode === 'erase') {
+      setEraserPosition({ x: locationX, y: locationY });
+      eraseAtPoint(locationX, locationY, locationX, locationY);
+    }
+  },
+  onPanResponderMove: (event, gestureState) => {
+    const { locationX, locationY } = event.nativeEvent;
+    if (mode === 'draw' && currentPath) {
+      setCurrentPath(prevPath => {
+        const newPath = { 
+          ...prevPath, 
+          points: [...prevPath.points, `L${locationX},${locationY}`] 
+        };
+        setPaths(prevPaths => prevPaths.map(p => p.id === prevPath.id ? newPath : p));
+        return newPath;
+      });
+    } else if (mode === 'erase') {
+      eraseAtPoint(eraserPosition.x, eraserPosition.y, locationX, locationY);
+      setEraserPosition({ x: locationX, y: locationY });
+    }
+  },
+  onPanResponderRelease: () => {
+    setCurrentPath(null);
+    setEraserPosition(null);
+  },
+}), [mode, currentPath, currentColor, eraseAtPoint, eraserPosition]);
 
-  const toggleMode = (newMode) => {
+  const toggleMode = useCallback((newMode) => {
     setMode(newMode);
     setEraserPosition(null);
-  };
+  }, []);
 
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     setPaths([]);
-  };
+  }, []);
 
-  const handleDone = async () => {
+  const handleDone = useCallback(async () => {
     try {
       if (mediaType === 'video') {
-        const overlayUri = await viewShotRef.current.capture({
-          format: "png",
+        const svgString = await viewShotRef.current.capture({
+          format: "svg",
           quality: 1,
-          result: "tmpfile",
-          transparent: true,
+          result: "base64",
         });
         
         navigation.navigate('EditingScreen', { 
           media: { 
-            uri: image, // Original video URI
+            uri: image,
             type: 'video',
-            overlay: overlayUri // URI of the captured drawing overlay
+            overlay: `data:image/svg+xml;base64,${svgString}`
           },
           originalMedia: originalMedia
         });
       } else {
-        // Existing code for images and layouts
         const uri = await viewShotRef.current.capture({
           format: "png",
           quality: 1,
@@ -152,9 +200,9 @@ const eraseAtPoint = (x, y) => {
       Alert.alert('Error', 'Failed to save the edited image.');
       navigation.goBack();
     }
-  };
+  }, [image, mediaType, originalMedia, navigation]);
 
-  const renderMedia = () => {
+  const renderMedia = useCallback(() => {
     switch (mediaType) {
       case 'video':
         return (
@@ -165,6 +213,7 @@ const eraseAtPoint = (x, y) => {
             resizeMode="contain"
             repeat
             paused={false}
+            onError={(error) => console.error('Video error:', error)}
           />
         );
       case 'layout':
@@ -187,7 +236,7 @@ const eraseAtPoint = (x, y) => {
           <Image source={{ uri: image }} style={styles.media} resizeMode="contain" />
         );
     }
-  };
+  }, [image, mediaType, layoutData, selectedLayoutId]);
 
   return (
     <View style={styles.container}>
@@ -209,9 +258,9 @@ const eraseAtPoint = (x, y) => {
         <View {...panResponder.panHandlers} style={[StyleSheet.absoluteFill, styles.transparentBackground]}>
           {renderMedia()}
           <Svg style={[StyleSheet.absoluteFill, styles.transparentBackground]}>
-            {paths.map(path => (
+            {paths.map((path, index) => (
               <Path
-                key={path.id}
+                key={`${path.id}-${index}`}
                 d={path.points.join(' ')}
                 stroke={path.color}
                 strokeWidth={2}
@@ -222,7 +271,7 @@ const eraseAtPoint = (x, y) => {
               <Circle
                 cx={eraserPosition.x}
                 cy={eraserPosition.y}
-                r={ERASER_SIZE}
+                r={ERASER_SIZE / 2}
                 fill="rgba(200, 200, 200, 0.5)"
               />
             )}
@@ -258,7 +307,7 @@ const styles = StyleSheet.create({
   },
   mediaContainer: {
     width: screenWidth,
-    height: screenHeight - hp('18%'), // Adjust this value to fit your layout
+    height: screenHeight - hp('18%'),
     backgroundColor: 'transparent',
   },
   media: {
@@ -292,5 +341,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
 });
+
+// Simple debounce function
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
 
 export default DrawingScreen;

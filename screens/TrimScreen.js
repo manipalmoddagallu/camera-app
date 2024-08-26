@@ -20,17 +20,19 @@ const TrimScreen = ({ route }) => {
   const [endTime, setEndTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef(null);
+
   useEffect(() => {
     if (currentTime >= endTime) {
       setIsPlaying(false);
       videoRef.current.seek(startTime);
     }
-  }, [currentTime, endTime]);
+  }, [currentTime, endTime, startTime]);
 
-  const handleLoad = (meta) => {
-    setDuration(meta.duration);
-    setEndTime(meta.duration);
-  };
+  useEffect(() => {
+    console.log('isPlaying:', isPlaying);
+    console.log('currentTime:', currentTime);
+    console.log('trimmedVideo:', trimmedVideo);
+  }, [isPlaying, currentTime, trimmedVideo]);
 
   const formatTime = (timeInSeconds) => {
     const minutes = Math.floor(timeInSeconds / 60);
@@ -44,8 +46,24 @@ const TrimScreen = ({ route }) => {
     const outputPath = `${RNFS.CachesDirectoryPath}/trimmed_video_${Date.now()}.mp4`;
     try {
       await FFmpegKit.execute(`-i "${video.uri}" -ss ${startTime.toFixed(3)} -to ${endTime.toFixed(3)} -c:v libx264 -c:a aac -strict experimental -b:a 128k ${outputPath}`);
-      setTrimmedVideo({ uri: outputPath, type: 'video' });
-      Alert.alert('Success', 'Video trimmed successfully');
+      
+      const exists = await RNFS.exists(outputPath);
+      if (exists) {
+        console.log('Trimmed video file exists');
+        setTrimmedVideo({ uri: outputPath, type: 'video' });
+        // Reset player state
+        setCurrentTime(0);
+        setStartTime(0);
+        setEndTime(endTime - startTime);
+        setDuration(endTime - startTime);
+        // Seek to the start and play
+        videoRef.current.seek(0);
+        setIsPlaying(true);
+        Alert.alert('Success', 'Video trimmed successfully');
+      } else {
+        console.error('Trimmed video file does not exist');
+        Alert.alert('Error', 'Failed to create trimmed video file');
+      }
     } catch (error) {
       console.error('Error trimming video', error);
       Alert.alert('Error', 'Failed to trim video');
@@ -53,17 +71,32 @@ const TrimScreen = ({ route }) => {
       setIsTrimming(false);
     }
   };
-const handleDone = () => {
-  if (trimmedVideo) {
-    navigation.navigate('EditingScreen', {
-      trimmedVideo: trimmedVideo
-    });
-  } else {
-    navigation.navigate('EditingScreen', {
-      media: video
-    });
-  }
-};
+
+  const handleDone = () => {
+    if (trimmedVideo) {
+      navigation.navigate('EditingScreen', {
+        trimmedVideo: trimmedVideo
+      });
+    } else {
+      navigation.navigate('EditingScreen', {
+        media: video
+      });
+    }
+  };
+
+  const handleLoad = (meta) => {
+    console.log('Video loaded, duration:', meta.duration);
+    setDuration(meta.duration);
+    if (!trimmedVideo) {
+      setEndTime(meta.duration);
+    } else {
+      setEndTime(meta.duration);
+      // Ensure playback starts from the beginning for trimmed video
+      videoRef.current.seek(0);
+      setIsPlaying(true);
+    }
+  };
+
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying);
     if (!isPlaying) {

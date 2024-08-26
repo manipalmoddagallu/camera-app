@@ -9,29 +9,29 @@ import {
 
 const GalleryMenu = ({ isVisible, onClose, onImageSelect }) => {
   const [activeTab, setActiveTab] = useState('gallery');
-  const [galleryImages, setGalleryImages] = useState([]);
+  const [galleryMedia, setGalleryMedia] = useState([]);
   const [draftedMedia, setDraftedMedia] = useState([]);
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedMedia, setSelectedMedia] = useState(null);
 
   useEffect(() => {
     if (isVisible) {
       if (activeTab === 'gallery') {
-        loadGalleryImages();
+        loadGalleryMedia();
       } else if (activeTab === 'draft') {
         loadDraftedMedia();
       }
     }
   }, [isVisible, activeTab]);
 
-  const loadGalleryImages = async () => {
+  const loadGalleryMedia = async () => {
     try {
       const result = await CameraRoll.getPhotos({
         first: 1000,
-        assetType: 'Photos',
+        assetType: 'All',
       });
-      setGalleryImages(result.edges);
+      setGalleryMedia(result.edges);
     } catch (error) {
-      console.error('Error loading gallery images:', error);
+      console.error('Error loading gallery media:', error);
     }
   };
 
@@ -46,51 +46,67 @@ const GalleryMenu = ({ isVisible, onClose, onImageSelect }) => {
     }
   };
 
-    const handleImageSelect = (image, isDraft = false) => {
-    let selectedImageUri;
+  const handleMediaSelect = (media, isDraft = false) => {
+    let selectedMediaUri;
     if (isDraft) {
-      selectedImageUri = image.editedImageUri || image.uri;
+      selectedMediaUri = media.editedImageUri || media.uri;
     } else {
-      selectedImageUri = image.node.image.uri;
+      selectedMediaUri = media.node.image.uri;
     }
-    setSelectedImage(selectedImageUri);
-    console.log('Selected image:', selectedImageUri);
+    setSelectedMedia(selectedMediaUri);
+    console.log('Selected media:', selectedMediaUri);
   };
 
-  const handleDone = () => {
-    if (selectedImage) {
-      const selectedItem = activeTab === 'draft' 
-        ? draftedMedia.find(item => (item.editedImageUri || item.uri) === selectedImage)
-        : galleryImages.find(item => item.node.image.uri === selectedImage);
-      onImageSelect(selectedImage, selectedItem);
-      onClose();
-    }
-  };
+const handleDone = () => {
+  if (selectedMedia) {
+    const selectedItem = activeTab === 'draft' 
+      ? draftedMedia.find(item => (item.editedImageUri || item.uri) === selectedMedia)
+      : galleryMedia.find(item => item.node.image.uri === selectedMedia);
+    const mediaType = activeTab === 'draft' ? selectedItem.type : selectedItem.node.type;
+    onImageSelect(selectedMedia, selectedItem, mediaType);
+    onClose();
+  }
+};
 
-  const renderGalleryItem = ({ item }) => (
-    <TouchableOpacity onPress={() => handleImageSelect(item)}>
-      <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: item.node.image.uri }}
-          style={styles.image}
-        />
-        {selectedImage === item.node.image.uri && (
-          <View style={styles.selectedMark}>
-            <View style={styles.checkmark} />
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
+  const renderGalleryItem = ({ item }) => {
+    const isVideo = item.node.type.startsWith('video');
+    return (
+      <TouchableOpacity onPress={() => handleMediaSelect(item)}>
+        <View style={styles.imageContainer}>
+          {isVideo ? (
+            <View style={styles.videoContainer}>
+              <Image
+                source={{ uri: item.node.image.uri }}
+                style={styles.image}
+              />
+              <View style={styles.videoIcon}>
+                <Text style={styles.videoIconText}>▶️</Text>
+              </View>
+            </View>
+          ) : (
+            <Image
+              source={{ uri: item.node.image.uri }}
+              style={styles.image}
+            />
+          )}
+          {selectedMedia === item.node.image.uri && (
+            <View style={styles.selectedMark}>
+              <View style={styles.checkmark} />
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderDraftItem = ({ item }) => (
-    <TouchableOpacity onPress={() => handleImageSelect(item, true)}>
+    <TouchableOpacity onPress={() => handleMediaSelect(item, true)}>
       <View style={styles.imageContainer}>
         <Image
           source={{ uri: item.editedImageUri || item.uri }}
           style={styles.image}
         />
-        {selectedImage === (item.editedImageUri || item.uri) && (
+        {selectedMedia === (item.editedImageUri || item.uri) && (
           <View style={styles.selectedMark}>
             <View style={styles.checkmark} />
           </View>
@@ -102,7 +118,7 @@ const GalleryMenu = ({ isVisible, onClose, onImageSelect }) => {
   const renderContent = () => {
     return activeTab === 'gallery' ? (
       <FlatList
-        data={galleryImages}
+        data={galleryMedia}
         renderItem={renderGalleryItem}
         keyExtractor={(item) => item.node.image.uri}
         numColumns={3}
@@ -145,7 +161,7 @@ const GalleryMenu = ({ isVisible, onClose, onImageSelect }) => {
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <Text>Close</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.doneButton, !selectedImage && styles.disabledButton]} onPress={handleDone} disabled={!selectedImage}>
+            <TouchableOpacity style={[styles.doneButton, !selectedMedia && styles.disabledButton]} onPress={handleDone} disabled={!selectedMedia}>
               <Text style={styles.doneButtonText}>Done</Text>
             </TouchableOpacity>
           </View>
@@ -178,7 +194,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
-    color: "#000"
+    color: "#020E27"
   },
   activeTab: {
     borderBottomColor: 'blue',
@@ -238,6 +254,27 @@ const styles = StyleSheet.create({
   },
   doneButtonText: {
     color: 'white',
+  },
+  videoContainer: {
+    position: 'relative',
+    width: '100%',
+    height: '100%',
+  },
+  videoIcon: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -12 }, { translateY: -12 }],
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoIconText: {
+    color: 'white',
+    fontSize: 16,
   },
 });
 

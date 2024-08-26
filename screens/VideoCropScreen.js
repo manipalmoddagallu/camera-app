@@ -177,7 +177,7 @@ const handleCrop = async () => {
       </View>
       <TouchableOpacity style={styles.cropButton} onPress={handleCrop} disabled={isLoading}>
         {isLoading ? (
-          <ActivityIndicator color="#000" />
+          <ActivityIndicator color="#020E27" />
         ) : (
           <Text>Crop Video</Text>
         )}
