@@ -13,13 +13,16 @@ import TrimScreen from './screens/TrimScreen';
 import MusicMenu from './screens/MusicMenu';
 import UploadScreen from './screens/UploadScreen';
 import VideoCropScreen from './screens/VideoCropScreen';
+import { SoundProvider } from './screens/SoundContext';
+
 
 
 const Stack = createStackNavigator();
 
 const App = () => {
   return (
-    <NavigationContainer>
+     <SoundProvider>
+        <NavigationContainer>
       <Stack.Navigator>
         <Stack.Screen 
           name="Camera" 
@@ -46,6 +49,8 @@ const App = () => {
 
       </Stack.Navigator>
     </NavigationContainer>
+     </SoundProvider>
+  
   );
 };
 

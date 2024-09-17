@@ -212,34 +212,52 @@ const handleGalleryImageSelect = (mediaUri, selectedItem, mediaType) => {
     }
   };
 
-  const takePicture = async () => {
-    if (camera.current == null) {
-      Alert.alert('Camera not initialized', 'Camera is not ready yet.');
-      return;
-    }
-    try {
-      const { width, height } = Dimensions.get('window');
-      const isPortrait = height > width;
+const takePicture = async () => {
+  if (camera.current == null) {
+    Alert.alert('Camera not initialized', 'Camera is not ready yet.');
+    return;
+  }
+  try {
+    const { width, height } = Dimensions.get('window');
+    const isPortrait = height > width;
+    console.log('Device orientation:', isPortrait ? 'Portrait' : 'Landscape');
+    console.log('Camera position:', selectedDevice.position);
 
-      const photo = await camera.current.takePhoto({
-        quality: 1,
-        flash: flash,
-        enableShutterSound: false,
-        skipMetadata: false,
-        enableAutoStabilization: true,
-        outputOrientation: isPortrait ? 'portrait' : 'landscapeRight',
-        photoCodec: 'png',
-        format: 'png',
-        imageType: 'original',
-        ...(selectedFilter && selectedFilter.id !== 1 && { filter: selectedFilter.filterComponent }),
-      });
-    
-      const imagePath = Platform.OS === 'ios' ? photo.path : `file://${photo.path}`;
-      navigation.navigate('Layout_Screen', { selectedImage: imagePath });
-    } catch (error) {
-      Alert.alert('Error', `Failed to take picture: ${error.message}`);
+    const photo = await camera.current.takePhoto({
+      quality: 1,
+      flash: flash,
+      enableShutterSound: false,
+      skipMetadata: false,
+      enableAutoStabilization: true,
+      photoCodec: 'jpeg',
+      format: 'jpeg',
+      imageType: 'original',
+      ...(selectedFilter && selectedFilter.id !== 1 && { filter: selectedFilter.filterComponent }),
+    });
+
+    console.log('Photo taken:', photo);
+
+    let rotationNeeded = 0;
+    if (photo.orientation === 'landscape-left' || photo.orientation === 'landscape-right') {
+      rotationNeeded = 90; // Always rotate 90 degrees if landscape
     }
-  };
+
+    console.log('Rotation needed:', rotationNeeded);
+
+    const imagePath = Platform.OS === 'ios' ? photo.path : `file://${photo.path}`;
+
+    navigation.navigate('Layout_Screen', { 
+      selectedImage: imagePath,
+      rotation: rotationNeeded,
+      width: photo.width,
+      height: photo.height
+    });
+
+  } catch (error) {
+    console.error('Error taking picture:', error);
+    Alert.alert('Error', `Failed to take picture: ${error.message}`);
+  }
+};
 
   const flipCamera = () => {
     if (devices.length > 0) {
@@ -260,7 +278,7 @@ const handleGalleryImageSelect = (mediaUri, selectedItem, mediaType) => {
     });
   };
 
-  const startVideoRecording = async () => {
+const startVideoRecording = async () => {
   if (camera.current == null) {
     Alert.alert('Camera not initialized', 'Camera is not ready yet.');
     return;
@@ -281,15 +299,15 @@ const handleGalleryImageSelect = (mediaUri, selectedItem, mediaType) => {
     const options = {
       flash: flash,
       fileType: 'mp4',
-      videoCodec: 'h264', // H.264 for high quality and wide compatibility
-      videoBitRate: 8000000, // 8 Mbps for high quality, but not excessive
-      fps: 30, // 30 fps for good quality and compatibility
+      videoCodec: 'h264',
+      videoBitRate: isSlowMotionMode ? 20000000 : 8000000,
+      fps: isSlowMotionMode ? 120 : 30,
       videoStabilizationMode: 'standard',
       audioQuality: 'high',
-      audioBitRate: 128000, // 128 kbps for high-quality audio
+      audioBitRate: 128000,
       onRecordingFinished: (video) => {
         console.log('Video recording finished:', video);
-        navigateToEditingScreen(video.path);
+        navigateToEditingScreen(video.path, isSlowMotionMode);
       },
       onRecordingError: (error) => {
         console.error('Video recording error:', error);
@@ -326,10 +344,9 @@ const stopVideoRecording = async () => {
   }
 };
 
-const navigateToEditingScreen = (videoPath) => {
-  console.log('Navigating to EditingScreen with video path:', videoPath);
+const navigateToEditingScreen = (videoPath, isSlowMotion) => {
   navigation.navigate('EditingScreen', { 
-    media: { uri: videoPath, type: 'video' }
+    media: { uri: videoPath, type: isSlowMotion ? 'slowMotionVideo' : 'video' }
   });
 };
 

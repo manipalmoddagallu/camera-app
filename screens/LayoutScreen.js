@@ -19,6 +19,7 @@ import {COLOR, FONT, FONT_SIZE} from './utils/Config';
 import ImagePicker from 'react-native-image-crop-picker';
 import {useNavigation} from '@react-navigation/native';
 import {LAYOUTS} from './utils/Layouts';
+
 const Layout = (props = ({route}) => {
  const navigation = useNavigation();
   const selectedImages = route.params;
@@ -487,7 +488,6 @@ const Layout = (props = ({route}) => {
                   </>
                 )}
               </TouchableOpacity>
-
               <TouchableOpacity
                 onPress={() => openImagePicker(selectedLayoutId, 2)}
                 style={[styles.imageview, {flex: 1}]}>
@@ -504,7 +504,6 @@ const Layout = (props = ({route}) => {
                 )}
               </TouchableOpacity>
             </View>
-
             <View style={styles.mainView}>
               <TouchableOpacity
                 onPress={() => openImagePicker(selectedLayoutId, 3)}
@@ -537,7 +536,6 @@ const Layout = (props = ({route}) => {
                 )}
               </TouchableOpacity>
             </View>
-
             <View style={{flex: 1, flexDirection: 'row'}}>
               <TouchableOpacity
                 onPress={() => openImagePicker(selectedLayoutId, 5)}
@@ -570,7 +568,6 @@ const Layout = (props = ({route}) => {
                   </>
                 )}
               </TouchableOpacity>
-              {/* Seventh Column */}
               <TouchableOpacity
                 onPress={() => openImagePicker(selectedLayoutId, 7)}
                 style={[styles.imageview, styles.rightBorder]}>
@@ -586,7 +583,6 @@ const Layout = (props = ({route}) => {
                   </>
                 )}
               </TouchableOpacity>
-              {/* Eighth Column */}
               <TouchableOpacity
                 onPress={() => openImagePicker(selectedLayoutId, 8)}
                 style={[styles.imageview, {flex: 1}]}>
@@ -606,7 +602,6 @@ const Layout = (props = ({route}) => {
           </View>
         ) : selectedLayoutId === 7 ? (
           <View style={styles.layoutRowcenter}>
-            {/* First Column */}
             <View style={[styles.rightBorder, {flexDirection: 'column'}]}>
               <View style={{flex: 1, flexDirection: 'row'}}>
                 <TouchableOpacity
@@ -624,7 +619,6 @@ const Layout = (props = ({route}) => {
                     </>
                   )}
                 </TouchableOpacity>
-
                 <TouchableOpacity
                   onPress={() => openImagePicker(selectedLayoutId, 2)}
                   style={[styles.imageview, {flex: 1}]}>
@@ -641,7 +635,6 @@ const Layout = (props = ({route}) => {
                   )}
                 </TouchableOpacity>
               </View>
-
               <TouchableOpacity
                 onPress={() => openImagePicker(selectedLayoutId, 3)}
                 style={[styles.imageview, styles.topBorder]}>
@@ -657,7 +650,6 @@ const Layout = (props = ({route}) => {
                   </>
                 )}
               </TouchableOpacity>
-
               <View style={{flex: 1, borderTopWidth: hp('0.3%')}}>
                 <View style={{flex: 1, flexDirection: 'row'}}>
                   <TouchableOpacity
@@ -675,7 +667,6 @@ const Layout = (props = ({route}) => {
                       </>
                     )}
                   </TouchableOpacity>
-
                   <TouchableOpacity
                     onPress={() => openImagePicker(selectedLayoutId, 5)}
                     style={[styles.imageview, {flex: 1}]}>
@@ -694,7 +685,6 @@ const Layout = (props = ({route}) => {
                 </View>
               </View>
             </View>
-
             <TouchableOpacity
               onPress={() => openImagePicker(selectedLayoutId, 6)}
               style={[styles.imageview, {flex: 1}]}>
@@ -732,8 +722,6 @@ const Layout = (props = ({route}) => {
                   </>
                 )}
               </TouchableOpacity>
-
-              {/* Second Row - Small */}
               <TouchableOpacity
                 onPress={() => openImagePicker(selectedLayoutId, 2)}
                 style={[
@@ -753,7 +741,6 @@ const Layout = (props = ({route}) => {
                 )}
               </TouchableOpacity>
             </View>
-
             <View style={{marginTop: 1}} />
             <View style={{flex: 1, flexDirection: 'row'}}>
               <TouchableOpacity
@@ -774,8 +761,6 @@ const Layout = (props = ({route}) => {
                   </>
                 )}
               </TouchableOpacity>
-
-              {/* Second Row - Big */}
               <TouchableOpacity
                 onPress={() => openImagePicker(selectedLayoutId, 4)}
                 style={[
@@ -816,7 +801,6 @@ const Layout = (props = ({route}) => {
                     </>
                   )}
                 </TouchableOpacity>
-                {/* Second Row - Small */}
                 <TouchableOpacity
                   style={styles.touchviews}
                   onPress={() => openImagePicker(selectedLayoutId, 2)}>
@@ -852,7 +836,6 @@ const Layout = (props = ({route}) => {
                     </>
                   )}
                 </TouchableOpacity>
-                {/* Second Row - Big */}
                 <TouchableOpacity
                   style={[styles.touchviews, {borderTopWidth: 3}]}
                   onPress={() => openImagePicker(selectedLayoutId, 4)}>
@@ -890,8 +873,6 @@ const Layout = (props = ({route}) => {
                 )}
               </TouchableOpacity>
             </View>
-
-            {/* Second Row */}
             <View style={{flex: 2, flexDirection: 'column'}}>
               <TouchableOpacity
                 onPress={() => openImagePicker(selectedLayoutId, 2)}
@@ -908,7 +889,6 @@ const Layout = (props = ({route}) => {
                   </>
                 )}
               </TouchableOpacity>
-              {/* Second Row - Big */}
               <TouchableOpacity
                 onPress={() => openImagePicker(selectedLayoutId, 3)}
                 style={[styles.touchviews, {borderTopWidth: 3}]}>

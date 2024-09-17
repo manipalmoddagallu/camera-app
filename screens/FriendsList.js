@@ -91,11 +91,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: wp('5%'),
     borderTopRightRadius: wp('5%'),
     overflow: 'hidden',
-    shadowColor: "#020E27",
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,

@@ -9,6 +9,7 @@ import {
   Text,
   TouchableOpacity,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { FILTERS } from './utils/Filters';
 import { images } from './assets/images/image';
@@ -20,13 +21,16 @@ import Config, { FONT, COLOR, FONT_SIZE } from './utils/Config';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 
 const Layout_Screen = ({ route }) => {
-  const { selectedImage } = route.params || {};
+  const { selectedImage, rotation, width: imageWidth, height: imageHeight } = route.params || {};
   const navigation = useNavigation();
   const isFocused = useIsFocused();
 
   const [imageUri, setImageUri] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const extractedUri = useRef(null);
+
+  const screenWidth = Dimensions.get('window').width;
+  const screenHeight = Dimensions.get('window').height;
 
   useEffect(() => {
     if (isFocused && selectedImage) {
@@ -45,14 +49,14 @@ const Layout_Screen = ({ route }) => {
     setSelectedIndex(index);
   };
 
-const handleNext = () => {
-  const imageToPass = selectedIndex === 0 ? imageUri : extractedUri.current;
-  navigation.navigate('EditingScreen', {
-    media: { uri: imageToPass, type: 'photo' },
-    filterIndex: selectedIndex, // Make sure this is correct
-    originalImageUri: imageUri,
-  });
-};
+  const handleNext = () => {
+    const imageToPass = selectedIndex === 0 ? imageUri : extractedUri.current;
+    navigation.navigate('EditingScreen', {
+      media: { uri: imageToPass, type: 'photo' },
+      filterIndex: selectedIndex,
+      originalImageUri: imageUri,
+    });
+  };
 
   const renderFilterComponent = ({ item, index }) => {
     const FilterComponent = item.filterComponent;
@@ -79,26 +83,44 @@ const handleNext = () => {
 
   const SelectedFilterComponent = FILTERS[selectedIndex].filterComponent;
 
+  // Calculate aspect ratio and image dimensions
+  const aspectRatio = imageWidth / imageHeight;
+  let displayWidth, displayHeight;
+  if (rotation === 90 || rotation === 270) {
+    displayHeight = screenWidth * 0.9; // 90% of screen width
+    displayWidth = displayHeight * aspectRatio;
+  } else {
+    displayWidth = screenWidth * 0.9; // 90% of screen width
+    displayHeight = displayWidth / aspectRatio;
+  }
+
+  const renderImage = () => (
+    <View style={styles.imageContainer}>
+      <Image
+        style={[
+          styles.image,
+          {
+            width: displayWidth,
+            height: displayHeight,
+            transform: [{ rotate: `${rotation}deg` }],
+          },
+        ]}
+        source={{ uri: imageUri }}
+        resizeMode={'contain'}
+      />
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       {imageUri ? (
         selectedIndex === 0 ? (
-          <Image
-            style={styles.image}
-            source={{ uri: imageUri }}
-            resizeMode={'contain'}
-          />
+          renderImage()
         ) : (
           <SelectedFilterComponent
             onExtractImage={onExtractImage}
             extractImageEnabled={true}
-            image={
-              <Image
-                style={styles.image}
-                source={{ uri: imageUri }}
-                resizeMode={'contain'}
-              />
-            }
+            image={renderImage()}
           />
         )
       ) : (
@@ -138,11 +160,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5FCFF',
   },
-  image: {
+  imageContainer: {
     width: wp('90%'),
     height: hp('50%'),
     marginVertical: hp('2%'),
     alignSelf: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  image: {
+    // width and height are now set dynamically
   },
   filterSelector: {
     width: wp('25%'),

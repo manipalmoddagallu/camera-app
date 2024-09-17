@@ -1,170 +1,109 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Alert, Dimensions, ActivityIndicator } from 'react-native';
-import Video from 'react-native-video';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, NativeEventEmitter, NativeModules } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { FFmpegKit } from 'ffmpeg-kit-react-native';
-import Slider from '@react-native-community/slider';
-import RNFS from 'react-native-fs';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-
-const { width, height } = Dimensions.get('window');
+import { showEditor, isValidFile, closeEditor } from 'react-native-video-trim';
 
 const TrimScreen = ({ route }) => {
-  const { video } = route.params;
   const navigation = useNavigation();
-  const [trimmedVideo, setTrimmedVideo] = useState(null);
-  const [isTrimming, setIsTrimming] = useState(false);
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [startTime, setStartTime] = useState(0);
-  const [endTime, setEndTime] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const videoRef = useRef(null);
+  const [videoUri, setVideoUri] = useState(route.params.video.uri);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [log, setLog] = useState([]);
 
-  useEffect(() => {
-    if (currentTime >= endTime) {
-      setIsPlaying(false);
-      videoRef.current.seek(startTime);
-    }
-  }, [currentTime, endTime, startTime]);
-
-  useEffect(() => {
-    console.log('isPlaying:', isPlaying);
-    console.log('currentTime:', currentTime);
-    console.log('trimmedVideo:', trimmedVideo);
-  }, [isPlaying, currentTime, trimmedVideo]);
-
-  const formatTime = (timeInSeconds) => {
-    const minutes = Math.floor(timeInSeconds / 60);
-    const seconds = Math.floor(timeInSeconds % 60);
-    const milliseconds = Math.floor((timeInSeconds % 1) * 100);
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
+  const addLog = (message) => {
+    setLog(prevLog => [...prevLog, `${new Date().toISOString()}: ${message}`]);
   };
 
-  const handleTrim = async () => {
-    setIsTrimming(true);
-    const outputPath = `${RNFS.CachesDirectoryPath}/trimmed_video_${Date.now()}.mp4`;
-    try {
-      await FFmpegKit.execute(`-i "${video.uri}" -ss ${startTime.toFixed(3)} -to ${endTime.toFixed(3)} -c:v libx264 -c:a aac -strict experimental -b:a 128k ${outputPath}`);
-      
-      const exists = await RNFS.exists(outputPath);
-      if (exists) {
-        console.log('Trimmed video file exists');
-        setTrimmedVideo({ uri: outputPath, type: 'video' });
-        // Reset player state
-        setCurrentTime(0);
-        setStartTime(0);
-        setEndTime(endTime - startTime);
-        setDuration(endTime - startTime);
-        // Seek to the start and play
-        videoRef.current.seek(0);
-        setIsPlaying(true);
-        Alert.alert('Success', 'Video trimmed successfully');
-      } else {
-        console.error('Trimmed video file does not exist');
-        Alert.alert('Error', 'Failed to create trimmed video file');
+  useEffect(() => {
+    const eventEmitter = new NativeEventEmitter(NativeModules.VideoTrim);
+    const subscription = eventEmitter.addListener('VideoTrim', (event) => {
+      addLog(`Received event: ${JSON.stringify(event)}`);
+      switch (event.name) {
+        case 'onLoad':
+          addLog('Media loaded successfully');
+          break;
+        case 'onShow':
+          addLog('Editor shown');
+          break;
+        case 'onHide':
+          addLog('Editor hidden');
+          break;
+        case 'onStartTrimming':
+          addLog('Trimming started');
+          setIsProcessing(true);
+          break;
+        case 'onFinishTrimming':
+          addLog('Trimming finished');
+          setIsProcessing(false);
+          closeEditor(); // Close the editor
+          addLog('Editor closed');
+          navigation.navigate('EditingScreen', { trimmedVideo: { uri: event.outputPath, type: 'video' } });
+          break;
+        case 'onCancelTrimming':
+          addLog('Trimming cancelled');
+          setIsProcessing(false);
+          break;
+        case 'onCancel':
+          addLog('Operation cancelled');
+          setIsProcessing(false);
+          break;
+        case 'onError':
+          addLog(`Error: ${event.error}`);
+          setIsProcessing(false);
+          alert(`Failed to trim video: ${event.error}`);
+          break;
+        case 'onLog':
+          addLog(`Log: ${event.message}`);
+          break;
+        case 'onStatistics':
+          addLog(`Statistics: ${JSON.stringify(event.statistics)}`);
+          break;
       }
+    });
+
+    // Call trimVideo function when the component mounts
+    trimVideo();
+
+    return () => {
+      subscription.remove();
+    };
+  }, [navigation]);
+
+  const trimVideo = async () => {
+    addLog('Starting trim process');
+    try {
+      const isValid = await isValidFile(videoUri);
+      if (!isValid) {
+        throw new Error('Invalid video file');
+      }
+
+      addLog(`Video URI: ${videoUri}`);
+      addLog('Calling showEditor');
+      await showEditor(videoUri, {
+        maxDuration: 15,
+        quality: 'low',
+        outputFormat: 'mp4',
+        bitrate: 2000000, // 1 Mbps
+        fps: 24,
+        useHardwareAcceleration: true,
+      });
+      addLog('showEditor call completed');
     } catch (error) {
-      console.error('Error trimming video', error);
-      Alert.alert('Error', 'Failed to trim video');
-    } finally {
-      setIsTrimming(false);
+      addLog(`Error in trimVideo: ${error.message}`);
+      console.error('Error showing trim editor:', error);
+      alert(`Failed to show trim editor: ${error.message}`);
     }
-  };
-
-  const handleDone = () => {
-    if (trimmedVideo) {
-      navigation.navigate('EditingScreen', {
-        trimmedVideo: trimmedVideo
-      });
-    } else {
-      navigation.navigate('EditingScreen', {
-        media: video
-      });
-    }
-  };
-
-  const handleLoad = (meta) => {
-    console.log('Video loaded, duration:', meta.duration);
-    setDuration(meta.duration);
-    if (!trimmedVideo) {
-      setEndTime(meta.duration);
-    } else {
-      setEndTime(meta.duration);
-      // Ensure playback starts from the beginning for trimmed video
-      videoRef.current.seek(0);
-      setIsPlaying(true);
-    }
-  };
-
-  const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
-    if (!isPlaying) {
-      videoRef.current.seek(startTime);
-    }
-  };
-
-  const handleProgress = (progress) => {
-    setCurrentTime(progress.currentTime);
   };
 
   return (
     <View style={styles.container}>
-      <Video
-        ref={videoRef}
-        source={{ uri: trimmedVideo ? trimmedVideo.uri : video.uri }}
-        style={styles.video}
-        resizeMode="contain"
-        onLoad={handleLoad}
-        paused={!isPlaying}
-        onProgress={handleProgress}
-      />
-      <View style={styles.controlsContainer}>
-        <TouchableOpacity onPress={handlePlayPause}>
-          <Icon name={isPlaying ? 'pause' : 'play-arrow'} size={30} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.timeText}>{formatTime(currentTime)} / {formatTime(duration)}</Text>
+      <Text style={styles.title}>Video Trimming in Progress</Text>
+      {isProcessing && <Text style={styles.processingText}>Processing...</Text>}
+      <View style={styles.logContainer}>
+        <Text style={styles.logTitle}>Debug Log:</Text>
+        {log.map((entry, index) => (
+          <Text key={index} style={styles.logEntry}>{entry}</Text>
+        ))}
       </View>
-      <View style={styles.trimmerContainer}>
-        <Slider
-          style={styles.trimmer}
-          minimumValue={0}
-          maximumValue={duration}
-          value={startTime}
-          onValueChange={setStartTime}
-          minimumTrackTintColor="#4CAF50"
-          maximumTrackTintColor="#9E9E9E"
-          thumbTintColor="#4CAF50"
-        />
-        <Slider
-          style={styles.trimmer}
-          minimumValue={0}
-          maximumValue={duration}
-          value={endTime}
-          onValueChange={setEndTime}
-          minimumTrackTintColor="#4CAF50"
-          maximumTrackTintColor="#9E9E9E"
-          thumbTintColor="#4CAF50"
-        />
-      </View>
-      <View style={styles.timeLabelsContainer}>
-        <Text style={styles.timeLabel}>Start: {formatTime(startTime)}</Text>
-        <Text style={styles.timeLabel}>End: {formatTime(endTime)}</Text>
-      </View>
-      <TouchableOpacity
-        style={[styles.button, isTrimming && styles.disabledButton]}
-        onPress={handleTrim}
-        disabled={isTrimming}
-      >
-        {isTrimming ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Trim Video</Text>
-        )}
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.button} onPress={handleDone}>
-        <Text style={styles.buttonText}>Done</Text>
-      </TouchableOpacity>
     </View>
   );
 };
@@ -172,55 +111,33 @@ const TrimScreen = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1E1E1E',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
-  video: {
-    width: width,
-    height: height * 0.4,
+  title: {
+    fontSize: 24,
+    marginBottom: 20,
   },
-  controlsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
+  processingText: {
+    fontSize: 18,
+    color: '#666',
+    marginBottom: 20,
   },
-  timeText: {
-    color: '#fff',
-    marginLeft: 10,
-  },
-  trimmerContainer: {
-    width: width - 40,
-    height: 50,
+  logContainer: {
     marginTop: 20,
-  },
-  trimmer: {
-    width: '100%',
-  },
-  timeLabelsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: width - 40,
-    marginTop: 10,
-  },
-  timeLabel: {
-    color: '#fff',
-  },
-  button: {
-    marginTop: 20,
-    padding: 15,
-    backgroundColor: '#4CAF50',
+    padding: 10,
+    backgroundColor: '#f0f0f0',
     borderRadius: 5,
-    width: width - 40,
-    alignItems: 'center',
+    width: '100%',
+    maxHeight: 200,
   },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
+  logTitle: {
     fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  logEntry: {
+    fontSize: 12,
   },
 });
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, FlatList, ImageBackground } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, FlatList, ImageBackground, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,6 +21,9 @@ const RecordingMenu = ({ onClose }) => {
 
   useEffect(() => {
     loadSavedRecordings();
+    return () => {
+      stopAllAudio();
+    };
   }, []);
 
   useEffect(() => {
@@ -46,6 +49,7 @@ const RecordingMenu = ({ onClose }) => {
       }
     } catch (error) {
       console.error('Error loading saved recordings:', error);
+      Alert.alert('Error', 'Failed to load saved recordings');
     }
   };
 
@@ -54,6 +58,7 @@ const RecordingMenu = ({ onClose }) => {
       await AsyncStorage.setItem('savedRecordings', JSON.stringify(recordings));
     } catch (error) {
       console.error('Error saving recordings:', error);
+      Alert.alert('Error', 'Failed to save recordings');
     }
   };
 
@@ -67,9 +72,10 @@ const RecordingMenu = ({ onClose }) => {
       console.log('Recording started', result);
       setIsRecording(true);
       setTimer(0);
-      setCurrentRecording(null); // Reset current recording when starting a new one
+      setCurrentRecording(null);
     } catch (error) {
       console.error('Error starting recording:', error);
+      Alert.alert('Error', 'Failed to start recording');
     }
   };
 
@@ -78,16 +84,17 @@ const RecordingMenu = ({ onClose }) => {
       const result = await audioRecorderPlayer.stopRecorder();
       console.log('Recording stopped', result);
       setIsRecording(false);
-      setCurrentRecording(result); // Set the current recording
-      return result; // This should be the file path
+      setCurrentRecording(result);
+      return result;
     } catch (error) {
       console.error('Error stopping recording:', error);
+      Alert.alert('Error', 'Failed to stop recording');
     }
   };
 
   const saveRecording = async () => {
     if (currentRecording) {
-      const filename = currentRecording.split('/').pop(); // Extract filename from path
+      const filename = currentRecording.split('/').pop();
       const newRecording = {
         id: Date.now(),
         name: `Recording ${savedRecordings.length + 1}`,
@@ -100,7 +107,8 @@ const RecordingMenu = ({ onClose }) => {
       await saveSavedRecordings(updatedRecordings);
       setTimer(0);
       setPlaybackTimer(0);
-      setCurrentRecording(null); // Reset current recording after saving
+      setCurrentRecording(null);
+      Alert.alert('Success', 'Recording saved successfully');
     }
   };
 
@@ -114,17 +122,13 @@ const RecordingMenu = ({ onClose }) => {
 
   const playRecording = async () => {
     if (isPlaying) {
-      // Stop playback
-      await audioRecorderPlayer.stopPlayer();
+      await audioRecorderPlayer.pausePlayer();
       setIsPlaying(false);
-      setPlaybackTimer(0);
     } else if (currentRecording) {
-      // Start playback of current recording
       try {
         const result = await audioRecorderPlayer.startPlayer(currentRecording);
         console.log('Playing current recording', result);
         setIsPlaying(true);
-        setPlaybackTimer(0);
         
         audioRecorderPlayer.addPlayBackListener((e) => {
           if (e.currentPosition === e.duration) {
@@ -137,11 +141,12 @@ const RecordingMenu = ({ onClose }) => {
         });
       } catch (error) {
         console.error('Error playing current recording:', error);
+        Alert.alert('Error', 'Failed to play recording');
       }
     }
   };
 
-const playSavedRecording = async (id) => {
+  const playSavedRecording = async (id) => {
     const recording = savedRecordings.find(r => r.id === id);
     if (recording) {
       try {
@@ -149,18 +154,22 @@ const playSavedRecording = async (id) => {
         const fileExists = await RNFS.exists(filePath);
         if (!fileExists) {
           console.error('Audio file does not exist:', filePath);
-          // Inform the user that the file is missing
+          Alert.alert('Error', 'Audio file not found');
           return;
         }
 
         if (playingId === id) {
-          // If the same recording is clicked, stop playback
-          await audioRecorderPlayer.stopPlayer();
-          setPlayingId(null);
+          // If the same recording is clicked, pause/resume playback
+          if (await audioRecorderPlayer.getCurrentPosition() > 0) {
+            await audioRecorderPlayer.pausePlayer();
+            setPlayingId(null);
+          } else {
+            await audioRecorderPlayer.resumePlayer();
+            setPlayingId(id);
+          }
         } else {
           // If a different recording is clicked or no recording is playing
           if (playingId !== null) {
-            // Stop the currently playing recording
             await audioRecorderPlayer.stopPlayer();
           }
           const result = await audioRecorderPlayer.startPlayer(filePath);
@@ -176,7 +185,26 @@ const playSavedRecording = async (id) => {
         }
       } catch (error) {
         console.error('Error playing saved recording:', error);
+        Alert.alert('Error', 'Failed to play saved recording');
       }
+    }
+  };
+
+  const stopAllAudio = async () => {
+    try {
+      if (isRecording) {
+        await audioRecorderPlayer.stopRecorder();
+      }
+      if (isPlaying || playingId !== null) {
+        await audioRecorderPlayer.stopPlayer();
+      }
+      setIsRecording(false);
+      setIsPlaying(false);
+      setPlayingId(null);
+      setTimer(0);
+      setPlaybackTimer(0);
+    } catch (error) {
+      console.error('Error stopping audio:', error);
     }
   };
 
@@ -188,7 +216,7 @@ const playSavedRecording = async (id) => {
   
   return (
     <ImageBackground 
-      source={require('./assets/images/BG.png')} // Replace with your image path
+      source={require('./assets/images/BG.png')}
       style={styles.container}
     >
       <View style={styles.overlay}>
@@ -236,22 +264,22 @@ const playSavedRecording = async (id) => {
           <FlatList
             data={savedRecordings}
             keyExtractor={(item) => item.id.toString()}
-renderItem={({ item }) => (
-        <View style={styles.savedItem}>
-          <View>
-            <Text style={styles.savedItemName}>{item.name}</Text>
-            <Text style={styles.savedItemDate}>{item.date}</Text>
-            <Text style={styles.savedItemDuration}>{formatTime(item.duration)}</Text>
-          </View>
-          <TouchableOpacity onPress={() => playSavedRecording(item.id)}>
-            <Icon 
-              name={playingId === item.id ? "pause" : "play"} 
-              size={24} 
-              color="#fff" 
-            />
-          </TouchableOpacity>
-        </View>
-      )}
+            renderItem={({ item }) => (
+              <View style={styles.savedItem}>
+                <View>
+                  <Text style={styles.savedItemName}>{item.name}</Text>
+                  <Text style={styles.savedItemDate}>{item.date}</Text>
+                  <Text style={styles.savedItemDuration}>{formatTime(item.duration)}</Text>
+                </View>
+                <TouchableOpacity onPress={() => playSavedRecording(item.id)}>
+                  <Icon 
+                    name={playingId === item.id ? "pause" : "play"} 
+                    size={24} 
+                    color="#fff" 
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
           />
         )}
       </View>

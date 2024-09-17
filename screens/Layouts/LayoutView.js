@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Image } from 'react-native';
 import styles from './styles';
-import ZoomableImage from '../ZoomableImage';
 
 const LayoutView = ({ layoutData, selectedLayoutId, getSelectedImage }) => {
   let layoutToRender;
@@ -16,13 +15,13 @@ const LayoutView = ({ layoutData, selectedLayoutId, getSelectedImage }) => {
                 <View style={styles.mainView}>
                   <View style={{ flex: 1 }}>
                     <View style={styles.layout4ColView}>
-                      <ZoomableImage
+                      <Image
                         source={{ uri: getSelectedImage(layout.id, 1) }}
                         style={styles.ImagesView}
                       />
                     </View>
                     <View style={styles.layout4_2Col}>
-                      <ZoomableImage
+                      <Image
                         source={{ uri: getSelectedImage(layout.id, 2) }}
                         style={styles.ImagesView}
                       />
@@ -30,13 +29,13 @@ const LayoutView = ({ layoutData, selectedLayoutId, getSelectedImage }) => {
                   </View>
                   <View style={{ flex: 1 }}>
                     <View style={styles.layout4ColView}>
-                      <ZoomableImage
+                      <Image
                         source={{ uri: getSelectedImage(layout.id, 3) }}
                         style={styles.ImagesView}
                       />
                     </View>
                     <View style={styles.layout4_2Col}>
-                      <ZoomableImage
+                      <Image
                         source={{ uri: getSelectedImage(layout.id, 4) }}
                         style={styles.ImagesView}
                       />
@@ -56,7 +55,7 @@ const LayoutView = ({ layoutData, selectedLayoutId, getSelectedImage }) => {
             .map(layout => (
               <View key={layout.id} style={styles.flexstart}>
                 <View style={{ flex: 1, }}>
-                  <ZoomableImage
+                  <Image
                     source={{ uri: getSelectedImage(layout.id, 1) }}
                     style={styles.ImagesView}
                   />
@@ -83,7 +82,7 @@ const LayoutView = ({ layoutData, selectedLayoutId, getSelectedImage }) => {
                   </View>
                   {/* Second Image */}
                   <View style={styles.layout4_2Col}>
-                    <ZoomableImage
+                    <Image
                       source={{ uri: getSelectedImage(layout.id, 2) }}
                       style={styles.ImagesView}
                     />
@@ -103,13 +102,13 @@ const LayoutView = ({ layoutData, selectedLayoutId, getSelectedImage }) => {
             .map(layout => (
               <View key={layout.id} style={styles.flexstart}>
                 <View style={styles.mainView}>
-                  <ZoomableImage
+                  <Image
                     source={{ uri: getSelectedImage(layout.id, 1) }}
                     style={styles.ImagesView}
                   />
                 </View>
                 <View style={{ flex: 1, flexDirection: 'row', }}>
-                  <ZoomableImage
+                  <Image
                     source={{ uri: getSelectedImage(layout.id, 2) }}
                     style={styles.ImagesView}
                   />
@@ -128,19 +127,19 @@ const LayoutView = ({ layoutData, selectedLayoutId, getSelectedImage }) => {
           <View key={layout.id} style={styles.flexstart}>
             <View style={{ flex: 1, flexDirection: 'row' }}>
               <View style={styles.layout4ColView}>
-                <ZoomableImage
+                <Image
                   source={{ uri: getSelectedImage(layout.id, 1) }}
                   style={styles.ImagesView}
                 />
               </View>
               <View style={styles.layout4_2Col}>
-                <ZoomableImage
+                <Image
                   source={{ uri: getSelectedImage(layout.id, 2) }}
                   style={styles.ImagesView}
                 />
               </View>
               <View style={{ flex: 1, }}>
-              <ZoomableImage
+              <Image
                   source={{ uri: getSelectedImage(layout.id, 3) }}
                   style={styles.ImagesView}
                 />
@@ -163,19 +162,19 @@ const LayoutView = ({ layoutData, selectedLayoutId, getSelectedImage }) => {
                       <View style={styles.mainView}>
 
                                 <View style={styles.layout4ColView}>
-                                    <ZoomableImage
+                                    <Image
                                         source={{ uri: getSelectedImage(layout.id, 1) }}
                                         style={styles.ImagesView}
                                     />
                                 </View>
                                 <View style={styles.layout4_2Col}>
-                                    <ZoomableImage
+                                    <Image
                                         source={{ uri: getSelectedImage(layout.id, 2) }}
                                         style={styles.ImagesView}
                                     />
                                 </View>
                                 <View style={styles.layout4ColView}>
-                                    <ZoomableImage
+                                    <Image
                                         source={{ uri: getSelectedImage(layout.id, 3) }}
                                         style={styles.ImagesView}
                                     />
@@ -183,13 +182,13 @@ const LayoutView = ({ layoutData, selectedLayoutId, getSelectedImage }) => {
                                 </View>
                                 <View style={{ flex: 1,flexDirection:'row'  }}>
                                 <View style={styles.layout4ColView}>
-                                    <ZoomableImage
+                                    <Image
                                         source={{ uri: getSelectedImage(layout.id, 4) }}
                                         style={styles.ImagesView}
                                     />
                                 </View>
                                 <View style={styles.layout4_2Col}>
-                                    <ZoomableImage
+                                    <Image
                                         source={{ uri: getSelectedImage(layout.id, 5) }}
                                         style={styles.ImagesView}
                                     />
@@ -212,13 +211,13 @@ const LayoutView = ({ layoutData, selectedLayoutId, getSelectedImage }) => {
                             <View style={styles.mainView}>
                                 <View style={{ flex: 1 }}>
                                     <View style={styles.layout4ColView}>
-                                        <ZoomableImage
+                                        <Image
                                             source={{ uri: getSelectedImage(layout.id, 1) }}
                                             style={styles.ImagesView}
                                         />
                                     </View>
                                     <View style={styles.layout4ColView}>
-                                        <ZoomableImage
+                                        <Image
                                             source={{ uri: getSelectedImage(layout.id, 2) }}
                                             style={styles.ImagesView}
                                         />
@@ -226,13 +225,13 @@ const LayoutView = ({ layoutData, selectedLayoutId, getSelectedImage }) => {
                                 </View>
                                 <View style={{ flex: 1 }}>
                                     <View style={styles.layout4ColView}>
-                                        <ZoomableImage
+                                        <Image
                                             source={{ uri: getSelectedImage(layout.id, 3) }}
                                             style={styles.ImagesView}
                                         />
                                     </View>
                                     <View style={styles.layout4ColView}>
-                                        <ZoomableImage
+                                        <Image
                                             source={{ uri: getSelectedImage(layout.id, 4) }}
                                             style={styles.ImagesView}
                                         />
@@ -241,13 +240,13 @@ const LayoutView = ({ layoutData, selectedLayoutId, getSelectedImage }) => {
                             </View>
                             <View style={{ flex: 1, flexDirection: 'row' }}>
                                 <View style={styles.layout4_2Col}>
-                                    <ZoomableImage
+                                    <Image
                                         source={{ uri: getSelectedImage(layout.id, 5) }}
                                         style={styles.ImagesView}
                                     />
                                 </View>
                                 <View style={styles.layout4_2Col}>
-                                    <ZoomableImage
+                                    <Image
                                         source={{ uri: getSelectedImage(layout.id, 6) }}
                                         style={styles.ImagesView}
                                     />
