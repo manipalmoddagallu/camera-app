@@ -356,28 +356,33 @@ const styles = StyleSheet.create({
   },
   scrollBar: {
     backgroundColor: 'white',
-    paddingVertical: SCREEN_HEIGHT * 0.01,
+    paddingVertical: hp('1%'),
     borderTopWidth: 1,
     borderTopColor: '#eee',
     borderWidth: 1,
     borderColor: 'black',
     borderRadius: 5,
   },
-  scrollBarContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   scrollBarItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: SCREEN_WIDTH * 0.2,
-    marginHorizontal: SCREEN_WIDTH * 0.02,
+    width: wp('18%'),
+    marginHorizontal: wp('1%'),
+    paddingHorizontal: wp('1%'),
+  },
+  iconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: wp('10%'),
+    marginBottom: hp('0.5%'),
   },
   scrollBarText: {
-    fontSize: SCREEN_WIDTH * 0.03,
-    marginTop: SCREEN_HEIGHT * 0.005,
+    fontSize: 14,
+    color : "#020E27",
     textAlign: 'center',
-    fontWeight: 'bold',
+    fontWeight: '900',
+    marginTop: hp('0.5%'),
+    width: '100%',
   },
   bottomBar: {
     flexDirection: 'row',
@@ -392,9 +397,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bottomBarText: {
-    fontSize: 14,
+    fontSize: 18,
     marginTop: SCREEN_HEIGHT * 0.005,
-    fontWeight: "bold"
+    fontWeight: "900",
+        color : "#020E27",
+
   },
   adjustBar: {
     backgroundColor: 'white',
@@ -443,8 +450,9 @@ const styles = StyleSheet.create({
   },
   filterText: {
     fontSize: SCREEN_WIDTH * 0.035,
-    fontWeight: '500',
+    fontWeight: 'Bold',
     textAlign: 'center',
+
   },
   selectedFilterItem: {
     backgroundColor: '#3498db',

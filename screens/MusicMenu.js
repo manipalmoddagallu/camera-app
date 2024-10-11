@@ -14,27 +14,33 @@ import {
 import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import RNFS from 'react-native-fs';
 import Sound from 'react-native-sound';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 Sound.setCategory('Playback');
 const { height } = Dimensions.get('window');
 
-const MusicModal = ({ isVisible, onClose, onSelectMusic }) => {
+const MusicModal = ({ isVisible, onClose, onSelectMusic, isMuted }) => {
   const [permissionStatus, setPermissionStatus] = useState('Checking permissions...');
   const [localMusicFiles, setLocalMusicFiles] = useState([]);
   const [currentTrack, setCurrentTrack] = useState(null);
   const [currentSound, setCurrentSound] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     if (isVisible) {
       requestPermission();
     }
     return () => {
-      if (currentSound) {
-        currentSound.release();
-      }
+      stopPlayback();
     };
   }, [isVisible]);
+
+  useEffect(() => {
+    if (currentSound) {
+      currentSound.setVolume(isMuted ? 0 : 1);
+    }
+  }, [isMuted]);
 
   const requestPermission = async () => {
     try {
@@ -90,10 +96,7 @@ const MusicModal = ({ isVisible, onClose, onSelectMusic }) => {
   };
 
   const playTrack = (track) => {
-    if (currentSound) {
-      currentSound.stop();
-      currentSound.release();
-    }
+    stopPlayback();
 
     const sound = new Sound(track.path, '', (error) => {
       if (error) {
@@ -103,10 +106,13 @@ const MusicModal = ({ isVisible, onClose, onSelectMusic }) => {
 
       setCurrentSound(sound);
       setCurrentTrack(track);
+      setIsPlaying(true);
       
+      sound.setVolume(isMuted ? 0 : 1);
       sound.play((success) => {
         if (success) {
           console.log('Successfully finished playing');
+          stopPlayback();
         } else {
           console.log('Playback failed due to audio decoding errors');
         }
@@ -116,19 +122,23 @@ const MusicModal = ({ isVisible, onClose, onSelectMusic }) => {
     onSelectMusic(track);
   };
 
-  const togglePlayPause = () => {
+  const stopPlayback = () => {
     if (currentSound) {
-      if (currentSound.isPlaying()) {
-        currentSound.pause(() => console.log('Sound paused'));
-      } else {
-        currentSound.play((success) => {
-          if (success) {
-            console.log('Successfully resumed playing');
-          } else {
-            console.log('Playback failed due to audio decoding errors');
-          }
-        });
-      }
+      currentSound.stop(() => {
+        console.log('Sound stopped');
+        currentSound.release();
+        setCurrentSound(null);
+        setCurrentTrack(null);
+        setIsPlaying(false);
+      });
+    }
+  };
+
+  const togglePlayPause = () => {
+    if (isPlaying) {
+      stopPlayback();
+    } else if (currentTrack) {
+      playTrack(currentTrack);
     }
   };
 
@@ -161,9 +171,15 @@ const MusicModal = ({ isVisible, onClose, onSelectMusic }) => {
         {currentTrack && (
           <View style={styles.playerControls}>
             <Text style={styles.nowPlaying}>Now Playing: {currentTrack.name}</Text>
-            <TouchableOpacity onPress={togglePlayPause} style={styles.playPauseButton}>
-              <Text style={styles.playPauseButtonText}>Play/Pause</Text>
-            </TouchableOpacity>
+            <View style={styles.controlButtons}>
+              <TouchableOpacity onPress={togglePlayPause} style={styles.iconButton}>
+                <Icon 
+                  name={isPlaying ? 'pause' : 'play-arrow'} 
+                  size={30} 
+                  color="#ffffff" 
+                />
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </>
@@ -174,7 +190,7 @@ const MusicModal = ({ isVisible, onClose, onSelectMusic }) => {
     <Modal visible={isVisible} animationType="slide" transparent>
       <View style={styles.modalWrapper}>
         <ImageBackground
-          source={require('./assets/images/BG.png')} // Replace with your image path
+          source={require('./assets/images/BG.png')}
           style={styles.backgroundImage}
         >
           <View style={styles.modalContainer}>
@@ -197,12 +213,12 @@ const styles = StyleSheet.create({
   },
   backgroundImage: {
     width: '100%',
-    height: height * 0.5, // 50% of screen height
+    height: height * 0.5,
   },
   modalContainer: {
     flex: 1,
     padding: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent overlay
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   title: {
     fontSize: 24,
@@ -250,15 +266,16 @@ const styles = StyleSheet.create({
     marginTop: 10,
     alignItems: 'center',
   },
-  playPauseButton: {
-    backgroundColor: 'rgba(0, 122, 255, 0.7)',
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 5,
+  controlButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 10,
   },
-  playPauseButtonText: {
-    color: '#fff',
-    fontSize: 16,
+  iconButton: {
+    padding: 10,
+    marginHorizontal: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 25,
   },
   closeButton: {
     marginTop: 10,

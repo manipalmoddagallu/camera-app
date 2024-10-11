@@ -10,13 +10,11 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import Video from 'react-native-video';
 import { useNavigation } from '@react-navigation/native';
 
-
 const GalleryMenu = ({ isVisible, onClose, onImageSelect }) => {
   const [activeTab, setActiveTab] = useState('gallery');
   const [media, setMedia] = useState([]);
   const [selectedMedia, setSelectedMedia] = useState([]);
-    const navigation = useNavigation();
-
+  const navigation = useNavigation();
 
   useEffect(() => {
     if (isVisible) {
@@ -65,14 +63,27 @@ const handleDone = () => {
       const selectedItems = media.filter(item => selectedMedia.includes(item.uri));
       const selectedItem = selectedItems[0]; // We'll use the first selected item
 
-      if (selectedItem.type.startsWith('video/')) {
-        // For video, navigate to EditingScreen
+      if (activeTab === 'draft') {
+        // For draft items, navigate to EditingScreen with all the draft data
         navigation.navigate('EditingScreen', { 
-          media: { uri: selectedItem.uri, type: 'video' }
+          draftedMedia: selectedItem,
+          media: { uri: selectedItem.uri, type: selectedItem.type || 'image' }
         });
       } else {
-        // For image, navigate to Layout_Screen
-        navigation.navigate('Layout_Screen', { selectedImage: selectedItem.uri });
+        if (selectedItem.type && selectedItem.type.startsWith('video/')) {
+          // For video, navigate to EditingScreen
+          navigation.navigate('EditingScreen', { 
+            media: { uri: selectedItem.uri, type: 'video' }
+          });
+        } else {
+          // For image, navigate to Layout_Screen
+          navigation.navigate('Layout_Screen', { 
+            selectedImage: selectedItem.uri,
+            rotation: 0, // Default rotation
+            width: selectedItem.width,
+            height: selectedItem.height
+          });
+        }
       }
       onClose();
     }
@@ -80,7 +91,7 @@ const handleDone = () => {
 
   const renderMediaItem = ({ item }) => {
     const isSelected = selectedMedia.includes(item.uri);
-    const isVideo = item.type.startsWith('video/');
+    const isVideo = item.type && item.type.startsWith('video/');
     
     return (
       <TouchableOpacity onPress={() => toggleMediaSelection(item.uri)}>
@@ -112,6 +123,11 @@ const handleDone = () => {
               <Text style={styles.playButtonText}>▶</Text>
             </View>
           )}
+          {activeTab === 'draft' && (
+            <View style={styles.draftIndicator}>
+              <Text style={styles.draftIndicatorText}>Draft</Text>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -131,13 +147,13 @@ const handleDone = () => {
               style={[styles.tab, activeTab === 'gallery' && styles.activeTab]}
               onPress={() => setActiveTab('gallery')}
             >
-              <Text>Gallery</Text>
+              <Text style={styles.tabText}>Gallery</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.tab, activeTab === 'draft' && styles.activeTab]}
               onPress={() => setActiveTab('draft')}
             >
-              <Text>Draft</Text>
+              <Text style={styles.tabText}>Draft</Text>
             </TouchableOpacity>
           </View>
           <FlatList
@@ -145,10 +161,11 @@ const handleDone = () => {
             renderItem={renderMediaItem}
             keyExtractor={(item) => item.uri}
             numColumns={3}
+            contentContainerStyle={styles.mediaList}
           />
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Text>Close</Text>
+              <Text style={styles.closeButtonText}>Close</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.doneButton, selectedMedia.length === 0 && styles.disabledButton]} 
@@ -187,10 +204,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
-    color: "#020E27"
   },
   activeTab: {
-    borderBottomColor: 'blue',
+    borderBottomColor: '#4CBB17',
+  },
+  tabText: {
+    color: "#020E27",
+    fontWeight: 'bold',
+  },
+  mediaList: {
+    paddingBottom: 20,
   },
   mediaContainer: {
     position: 'relative',
@@ -220,6 +243,19 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 20,
   },
+  draftIndicator: {
+    position: 'absolute',
+    bottom: 6,
+    left: 6,
+    backgroundColor: 'rgba(76, 187, 23, 0.7)',
+    borderRadius: 4,
+    padding: 2,
+  },
+  draftIndicatorText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -233,6 +269,10 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 10,
   },
+  closeButtonText: {
+    color: '#020E27',
+    fontWeight: 'bold',
+  },
   doneButton: {
     padding: 10,
     backgroundColor: '#4CBB17',
@@ -245,6 +285,7 @@ const styles = StyleSheet.create({
   },
   doneButtonText: {
     color: 'white',
+    fontWeight: 'bold',
   },
 });
 

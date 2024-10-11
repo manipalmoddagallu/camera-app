@@ -223,13 +223,15 @@ const takePicture = async () => {
     console.log('Device orientation:', isPortrait ? 'Portrait' : 'Landscape');
     console.log('Camera position:', selectedDevice.position);
 
+    // Force portrait capture
     const photo = await camera.current.takePhoto({
       quality: 1,
       flash: flash,
       enableShutterSound: false,
       skipMetadata: false,
       enableAutoStabilization: true,
-      photoCodec: 'jpeg',
+      orientation: 'portrait', // Force portrait orientation
+      photoCodec: 'jpeg', // Changed to JPEG for better compatibility
       format: 'jpeg',
       imageType: 'original',
       ...(selectedFilter && selectedFilter.id !== 1 && { filter: selectedFilter.filterComponent }),
@@ -237,21 +239,26 @@ const takePicture = async () => {
 
     console.log('Photo taken:', photo);
 
+    // Determine if rotation is needed
     let rotationNeeded = 0;
-    if (photo.orientation === 'landscape-left' || photo.orientation === 'landscape-right') {
-      rotationNeeded = 90; // Always rotate 90 degrees if landscape
+    if (selectedDevice.position === 'front' && !isPortrait) {
+      rotationNeeded = 90; // Rotate 90 degrees for front camera in landscape
+    } else if (selectedDevice.position === 'back' && !isPortrait) {
+      rotationNeeded = 0; // Rotate -90 degrees for back camera in landscape
     }
 
     console.log('Rotation needed:', rotationNeeded);
 
     const imagePath = Platform.OS === 'ios' ? photo.path : `file://${photo.path}`;
 
-    navigation.navigate('Layout_Screen', { 
-      selectedImage: imagePath,
-      rotation: rotationNeeded,
-      width: photo.width,
-      height: photo.height
-    });
+    // Pass both the image path and rotation information to the next screen
+navigation.navigate('Layout_Screen', { 
+  selectedImage: imagePath,
+  rotation: rotationNeeded,
+  width: photo.width,
+  height: photo.height,
+  isFrontCamera: selectedDevice.position === 'front'
+});
 
   } catch (error) {
     console.error('Error taking picture:', error);

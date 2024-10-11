@@ -21,7 +21,7 @@ import Config, { FONT, COLOR, FONT_SIZE } from './utils/Config';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 
 const Layout_Screen = ({ route }) => {
-  const { selectedImage, rotation, width: imageWidth, height: imageHeight } = route.params || {};
+  const { selectedImage, rotation = 0, width: imageWidth, height: imageHeight, isFrontCamera } = route.params || {};
   const navigation = useNavigation();
   const isFocused = useIsFocused();
 
@@ -35,10 +35,13 @@ const Layout_Screen = ({ route }) => {
   useEffect(() => {
     if (isFocused && selectedImage) {
       console.log('Received selectedImage in Layout_Screen:', selectedImage);
+      console.log('Image dimensions:', { width: imageWidth, height: imageHeight });
+      console.log('Is front camera:', isFrontCamera);
+      console.log('Rotation:', rotation);
       setImageUri(selectedImage);
       extractedUri.current = selectedImage;
     }
-  }, [isFocused, selectedImage]);
+  }, [isFocused, selectedImage, imageWidth, imageHeight, isFrontCamera, rotation]);
 
   const onExtractImage = ({ nativeEvent }) => {
     console.log('Extracted URI:', nativeEvent.uri);
@@ -53,6 +56,7 @@ const Layout_Screen = ({ route }) => {
     const imageToPass = selectedIndex === 0 ? imageUri : extractedUri.current;
     navigation.navigate('EditingScreen', {
       media: { uri: imageToPass, type: 'photo' },
+      rotation: rotation, // Add this line
       filterIndex: selectedIndex,
       originalImageUri: imageUri,
     });
@@ -62,7 +66,7 @@ const Layout_Screen = ({ route }) => {
     const FilterComponent = item.filterComponent;
     const image = (
       <Image
-        style={styles.filterSelector}
+        style={[styles.filterSelector, { rotate: imageRotation }]}
         source={{ uri: imageUri }}
         resizeMode={'contain'}
       />
@@ -84,14 +88,19 @@ const Layout_Screen = ({ route }) => {
   const SelectedFilterComponent = FILTERS[selectedIndex].filterComponent;
 
   // Calculate aspect ratio and image dimensions
-  const aspectRatio = imageWidth / imageHeight;
-  let displayWidth, displayHeight;
-  if (rotation === 90 || rotation === 270) {
+
+
+  if (isFrontCamera) {
+    // For front camera, always rotate 90 degrees clockwise
     displayHeight = screenWidth * 0.9; // 90% of screen width
-    displayWidth = displayHeight * aspectRatio;
+    displayWidth = displayHeight / aspectRatio;
+    imageRotation = '270deg';
+    imageScale = -1; // Mirror the image horizontally
   } else {
+    // For back camera, use the original rotation logic
     displayWidth = screenWidth * 0.9; // 90% of screen width
-    displayHeight = displayWidth / aspectRatio;
+    imageRotation = `${rotation}deg`;
+    imageScale = 1; // No mirroring
   }
 
   const renderImage = () => (
@@ -99,10 +108,10 @@ const Layout_Screen = ({ route }) => {
       <Image
         style={[
           styles.image,
-          {
-            width: displayWidth,
-            height: displayHeight,
-            transform: [{ rotate: `${rotation}deg` }],
+          {            transform: [
+              { rotate: imageRotation },
+              { scaleX: imageScale },
+            ],
           },
         ]}
         source={{ uri: imageUri }}
@@ -169,7 +178,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   image: {
-    // width and height are now set dynamically
+     width: wp('90%'),
+    height: hp('50%'),
+    marginVertical: hp('2%'),
+    alignSelf: 'center',
   },
   filterSelector: {
     width: wp('25%'),

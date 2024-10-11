@@ -6,9 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import RNFS from 'react-native-fs';
 
-const audioRecorderPlayer = new AudioRecorderPlayer();
-
-const RecordingMenu = ({ onClose }) => {
+const RecordingMenu = ({ isVisible, onClose, onRecordingComplete, isMuted }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [timer, setTimer] = useState(0);
@@ -17,12 +15,28 @@ const RecordingMenu = ({ onClose }) => {
   const [currentSection, setCurrentSection] = useState('record');
   const [currentRecording, setCurrentRecording] = useState(null);
   const [playingId, setPlayingId] = useState(null);
+  const [isLooping, setIsLooping] = useState(false);
+  const [selectedRecordingId, setSelectedRecordingId] = useState(null);
   const intervalRef = useRef(null);
+  const audioRecorderPlayer = useRef(new AudioRecorderPlayer()).current;
 
   useEffect(() => {
     loadSavedRecordings();
     return () => {
       stopAllAudio();
+    };
+  }, []);
+
+  useEffect(() => {
+    audioRecorderPlayer.setVolume(isMuted ? 0 : 1);
+  }, [isMuted]);
+
+  useEffect(() => {
+    return () => {
+      if (audioRecorderPlayer) {
+        audioRecorderPlayer.stopPlayer();
+        audioRecorderPlayer.removePlayBackListener();
+      }
     };
   }, []);
 
@@ -85,10 +99,10 @@ const RecordingMenu = ({ onClose }) => {
       console.log('Recording stopped', result);
       setIsRecording(false);
       setCurrentRecording(result);
+      onRecordingComplete(result);
       return result;
     } catch (error) {
-      console.error('Error stopping recording:', error);
-      Alert.alert('Error', 'Failed to stop recording');
+      console.error('Error in stop recording process:', error);
     }
   };
 
@@ -129,7 +143,7 @@ const RecordingMenu = ({ onClose }) => {
         const result = await audioRecorderPlayer.startPlayer(currentRecording);
         console.log('Playing current recording', result);
         setIsPlaying(true);
-        
+
         audioRecorderPlayer.addPlayBackListener((e) => {
           if (e.currentPosition === e.duration) {
             audioRecorderPlayer.stopPlayer();
@@ -143,6 +157,14 @@ const RecordingMenu = ({ onClose }) => {
         console.error('Error playing current recording:', error);
         Alert.alert('Error', 'Failed to play recording');
       }
+    }
+  };
+
+  const selectRecording = (id) => {
+    setSelectedRecordingId(id);
+    const recording = savedRecordings.find(r => r.id === id);
+    if (recording) {
+      Alert.alert('Recording Attached', `${recording.name} is being attached.`);
     }
   };
 
@@ -163,9 +185,13 @@ const RecordingMenu = ({ onClose }) => {
           if (await audioRecorderPlayer.getCurrentPosition() > 0) {
             await audioRecorderPlayer.pausePlayer();
             setPlayingId(null);
+            setIsLooping(false);
+            Alert.alert('Paused', `${recording.name} has been paused.`);
           } else {
             await audioRecorderPlayer.resumePlayer();
             setPlayingId(id);
+            setIsLooping(true);
+            Alert.alert('Playing', 'Recording is being played.');
           }
         } else {
           // If a different recording is clicked or no recording is playing
@@ -175,17 +201,34 @@ const RecordingMenu = ({ onClose }) => {
           const result = await audioRecorderPlayer.startPlayer(filePath);
           console.log('Playing saved recording', result);
           setPlayingId(id);
+          setIsLooping(true);
+          Alert.alert('Now Playing', 'Recording is being played.');
 
           audioRecorderPlayer.addPlayBackListener((e) => {
             if (e.currentPosition === e.duration) {
-              audioRecorderPlayer.stopPlayer();
-              setPlayingId(null);
+              // When the playback finishes, start it again
+              audioRecorderPlayer.startPlayer(filePath);
             }
           });
         }
+
+        // Set volume based on mute state
+        audioRecorderPlayer.setVolume(isMuted ? 0 : 1);
       } catch (error) {
         console.error('Error playing saved recording:', error);
         Alert.alert('Error', 'Failed to play saved recording');
+      }
+    }
+  };
+
+  const stopPlayback = async () => {
+    if (playingId !== null) {
+      await audioRecorderPlayer.stopPlayer();
+      setPlayingId(null);
+      setIsLooping(false);
+      const recording = savedRecordings.find(r => r.id === playingId);
+      if (recording) {
+        Alert.alert('Stopped', `${recording.name} has stopped playing.`);
       }
     }
   };
@@ -201,6 +244,7 @@ const RecordingMenu = ({ onClose }) => {
       setIsRecording(false);
       setIsPlaying(false);
       setPlayingId(null);
+      setIsLooping(false);
       setTimer(0);
       setPlaybackTimer(0);
     } catch (error) {
@@ -213,9 +257,44 @@ const RecordingMenu = ({ onClose }) => {
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
-  
+
+  const renderSavedItem = ({ item }) => {
+    const isPlaying = playingId === item.id;
+    const isSelected = selectedRecordingId === item.id;
+    return (
+      <TouchableOpacity
+        style={[
+          styles.savedItem,
+          isPlaying && styles.playingItem,
+          isSelected && styles.selectedItem
+        ]}
+        onPress={() => selectRecording(item.id)}
+      >
+        <View>
+          <Text style={[styles.savedItemName, isPlaying && styles.playingText]}>{item.name}</Text>
+          <Text style={[styles.savedItemDate, isPlaying && styles.playingText]}>{item.date}</Text>
+          <Text style={[styles.savedItemDuration, isPlaying && styles.playingText]}>{formatTime(item.duration)}</Text>
+        </View>
+        <View style={styles.playbackControls}>
+          <TouchableOpacity onPress={() => playSavedRecording(item.id)}>
+            <Icon
+              name={isPlaying ? "pause" : "play"}
+              size={24}
+              color={isPlaying ? "#00ff00" : "#fff"}
+            />
+          </TouchableOpacity>
+          {isPlaying && (
+            <TouchableOpacity onPress={stopPlayback} style={styles.stopButton}>
+              <Icon name="stop" size={24} color="#00ff00" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <ImageBackground 
+    <ImageBackground
       source={require('./assets/images/BG.png')}
       style={styles.container}
     >
@@ -245,14 +324,14 @@ const RecordingMenu = ({ onClose }) => {
               <Icon name={isRecording ? 'stop' : 'mic'} size={40} color={isRecording ? 'red' : 'white'} />
             </TouchableOpacity>
             <Text style={styles.timer}>{formatTime(isPlaying ? playbackTimer : timer)}</Text>
-            <TouchableOpacity 
-              style={[styles.playButton, !currentRecording && styles.disabledButton]} 
+            <TouchableOpacity
+              style={[styles.playButton, !currentRecording && styles.disabledButton]}
               onPress={playRecording}
               disabled={!currentRecording}
             >
               <Icon name={isPlaying ? 'pause' : 'play'} size={30} color={currentRecording ? '#fff' : '#888'} />
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.saveButton, !currentRecording && styles.disabledButton]}
               onPress={saveRecording}
               disabled={!currentRecording}
@@ -264,22 +343,7 @@ const RecordingMenu = ({ onClose }) => {
           <FlatList
             data={savedRecordings}
             keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => (
-              <View style={styles.savedItem}>
-                <View>
-                  <Text style={styles.savedItemName}>{item.name}</Text>
-                  <Text style={styles.savedItemDate}>{item.date}</Text>
-                  <Text style={styles.savedItemDuration}>{formatTime(item.duration)}</Text>
-                </View>
-                <TouchableOpacity onPress={() => playSavedRecording(item.id)}>
-                  <Icon 
-                    name={playingId === item.id ? "pause" : "play"} 
-                    size={24} 
-                    color="#fff" 
-                  />
-                </TouchableOpacity>
-              </View>
-            )}
+            renderItem={renderSavedItem}
           />
         )}
       </View>
@@ -371,6 +435,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.2)',
   },
+  playingItem: {
+    backgroundColor: 'rgba(0, 255, 0, 0.1)',
+  },
   savedItemName: {
     color: 'white',
     fontSize: wp('4%'),
@@ -384,9 +451,21 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: wp('3.5%'),
   },
+  playingText: {
+    color: '#00ff00',
+  },
+  playbackControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  stopButton: {
+    marginLeft: wp('2%'),
+  },
   disabledButton: {
     opacity: 0.5,
   },
 });
 
 export default RecordingMenu;
+
+
