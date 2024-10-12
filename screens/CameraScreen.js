@@ -516,11 +516,11 @@ const navigateToEditingScreen = (videoPath, isSlowMotion) => {
                 )}
                 
                <TouchableOpacity style={[styles.iconButton, styles.galleryButton]} onPress={openGallery}>
-  <Icon name="images" size={24} color="white" />
+  <Icon name="images" size={22} color="white" />
 </TouchableOpacity>
                 
              <TouchableOpacity style={[styles.iconButton, styles.flipButton]} onPress={flipCamera}>
-  <Icon name="camera-rotate" size={24} color="white" />
+  <Icon name="camera-rotate" size={20} color="white" />
 </TouchableOpacity>
                 
                 <TouchableOpacity
@@ -538,7 +538,7 @@ const navigateToEditingScreen = (videoPath, isSlowMotion) => {
 
                 {isSpecialMode && (
                   <TouchableOpacity style={styles.backButton} onPress={exitSpecialMode}>
-                    <Icon name="arrow-left" size={30} color="white" />
+                    <Icon name="arrow-left" size={24} color="white" />
                   </TouchableOpacity>
                 )}
 

@@ -169,18 +169,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5FCFF',
   },
+  upperContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lowerContent: {
+    flex: 1,
+  },
   imageContainer: {
     width: wp('90%'),
     height: hp('50%'),
-    marginVertical: hp('2%'),
-    alignSelf: 'center',
     justifyContent: 'center',
     alignItems: 'center',
   },
   image: {
-     width: wp('90%'),
+    width: wp('90%'),
     height: hp('50%'),
-    marginVertical: hp('2%'),
     alignSelf: 'center',
   },
   filterSelector: {
@@ -208,16 +213,13 @@ const styles = StyleSheet.create({
   },
   noImageText: {
     alignSelf: 'center',
-    width: '100%',
-    height: '45%',
-    justifyContent: 'center',
     textAlign: 'center',
-    marginTop: 20,
     color: '#666',
     fontSize: hp(2.5),
   },
   backgroundImage: {
-    width: wp('99%'),
+    flex: 1,
+    width: wp('100%'),
     alignItems: 'center',
     borderRadius: 10,
     justifyContent: 'center',
@@ -228,7 +230,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    width: wp('99%'),
+    width: wp('100%'),
     borderBottomWidth: hp('0.3%'),
     padding: hp('1%'),
   },
@@ -238,7 +240,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.F_23,
   },
   nextButton: {
-    backgroundColor: COLOR.GREEN,
+    backgroundColor: '#000',
     width: wp('20%'),
     height: hp('4%'),
     alignItems: 'center',
@@ -250,13 +252,13 @@ const styles = StyleSheet.create({
     fontSize: hp('2%'),
   },
   columnWrapper: {
-    columnGap: hp('1%'),
+    justifyContent: 'space-around',
   },
   flatListContainer: {
-    paddingBottom: hp('2%'),
+    flexGrow: 1,
   },
   listFooter: {
-    marginBottom: hp(20),
+    height: hp(2),
   },
 });
 

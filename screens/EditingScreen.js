@@ -569,9 +569,9 @@ const handleBrushPress = async () => {
           {textOptions.map((option, index) => (
             <TouchableOpacity key={index} style={styles.textDropdownItem} onPress={option.onPress}>
               {option.iconSet === 'Ionicons' ? (
-                <Icon name={option.icon} size={12} color="#fff" />
+                <Icon name={option.icon} size={16} color="#fff" />
               ) : (
-                <Icon1 name={option.icon} size={12} color="#fff" />
+                <Icon1 name={option.icon} size={16} color="#fff" />
               )}
               <Text style={styles.textDropdownItemText}>{option.text}</Text>
             </TouchableOpacity>
@@ -706,6 +706,8 @@ const handleBrushPress = async () => {
           pan: new Animated.ValueXY(newPosition),
           scale: new Animated.Value(1),
           rotate: new Animated.Value(0),
+          color: '#000000',
+          backgroundColor: '#fff',
           style: { color: selectedColor }
         };
         updatedFriends.push(newFriend);
@@ -743,7 +745,7 @@ const handleBrushPress = async () => {
         placeholder: 'Enter text',
         pan: new Animated.ValueXY(),
         scale: new Animated.Value(1),
-        style: { color: selectedColor, fontSize: 20},
+      style: { color: '#000000', fontSize: 24 },  // Set initial color to black and increase font size
         ref: React.createRef(),
       };
       setTextElements([...textElements, newText]);
@@ -1359,7 +1361,7 @@ const saveDraft = async () => {
      />
     <View style={styles.topBar}>
       <TouchableOpacity onPress={handleBackPress}>
-        <Icon name="arrow-back" size={24} color="#020E27" />
+        <Icon name="arrow-back" size={26} color="#020E27" />
       </TouchableOpacity>
       <TouchableOpacity onPress={() => setIsMusicModalVisible(true)}>
         <Icon name="musical-notes-sharp" size={24} color="#020E27" />
@@ -1698,7 +1700,7 @@ const saveDraft = async () => {
                   ]}
                   value={text.content}
                   placeholder={text.placeholder}
-                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  placeholderTextColor="#000"
                   onChangeText={(newContent) => {
                     handleEditText(text.id, newContent);
                     if (newContent && text.placeholder) {
@@ -2050,11 +2052,12 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
    overlayText: {
-    color: 'white',
+    color: '#000',
     fontSize: 24,
     minWidth: 100,
     zIndex:10,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    backgroundColor: '#fff'
   },
   colorPickerContainer: {
   flex: 1,
@@ -2141,7 +2144,7 @@ const styles = StyleSheet.create({
   backgroundColor: 'rgba(0, 0, 0, 0.8)',
   borderRadius: 15,
   padding: 10,
-  width: wp('50%'),
+    width: wp('60%'),  // Increased width to accommodate larger text
   elevation: 5,
   shadowColor: '#020E27',
   shadowOffset: { width: 0, height: 2 },
@@ -2152,16 +2155,16 @@ const styles = StyleSheet.create({
   textDropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 15,
+    paddingVertical: 15,  // Increased vertical padding
+    paddingHorizontal: 20,  // Increased horizontal padding
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.2)',
   },
   textDropdownItemText: {
-    marginLeft: wp('4%'),
-    fontSize: 12,
+   marginLeft: wp('4%'),
+    fontSize: 28,  // Increased font size
     color: '#fff',
-    fontWeight: '500',
+    fontWeight: 'bold',  // Changed to bold for better visibility
   },
   colorPickerDoneButton: {
     backgroundColor: '#4CAF50',
@@ -2202,7 +2205,7 @@ const styles = StyleSheet.create({
   },
   textDropdownContainer: {
     position: 'absolute',
-    top: hp('50%'),
+    top: hp('40%'),
     right: wp('10%'),
     flexDirection: 'row',
     alignItems: 'center',
@@ -2229,7 +2232,7 @@ const styles = StyleSheet.create({
   },
   textDropdownItemText: {
     marginLeft: wp('4%'),
-    fontSize: 12,
+    fontSize: 15,
     color: '#fff',
     fontWeight: '500',
   },

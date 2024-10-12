@@ -275,7 +275,7 @@ useEffect(() => {
           <Icon name="trash-bin" size={24} color="#020E27" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.iconButton} onPress={handleDone}>
-          <Icon2 name="done" size={24} color="#020E27" />
+          <Icon2 name="done" size={28} color="#020E27" />
         </TouchableOpacity>
       </View>
       

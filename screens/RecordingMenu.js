@@ -20,6 +20,7 @@ const RecordingMenu = ({ isVisible, onClose, onRecordingComplete, isMuted }) => 
   const intervalRef = useRef(null);
   const audioRecorderPlayer = useRef(new AudioRecorderPlayer()).current;
 
+
   useEffect(() => {
     loadSavedRecordings();
     return () => {
@@ -54,6 +55,7 @@ const RecordingMenu = ({ isVisible, onClose, onRecordingComplete, isMuted }) => 
     }
     return () => clearInterval(intervalRef.current);
   }, [isRecording, isPlaying]);
+  
 
   const loadSavedRecordings = async () => {
     try {
@@ -82,6 +84,11 @@ const RecordingMenu = ({ isVisible, onClose, onRecordingComplete, isMuted }) => 
     const filename = `recording_${Date.now()}.m4a`;
     const filePath = getFilePath(filename);
     try {
+      Alert.alert(
+        "Recording Started",
+        "You can't record more than 100 seconds.",
+        [{ text: "OK" }]
+      );
       const result = await audioRecorderPlayer.startRecorder(filePath);
       console.log('Recording started', result);
       setIsRecording(true);
@@ -105,7 +112,47 @@ const RecordingMenu = ({ isVisible, onClose, onRecordingComplete, isMuted }) => 
       console.error('Error in stop recording process:', error);
     }
   };
+  const deleteRecording = async (id) => {
+    const recordingToDelete = savedRecordings.find(r => r.id === id);
+    if (recordingToDelete) {
+      Alert.alert(
+        "Delete Recording",
+        `Are you sure you want to delete ${recordingToDelete.name}?`,
+        [
+          {
+            text: "Cancel",
+            style: "cancel"
+          },
+          {
+            text: "Delete",
+            onPress: async () => {
+              try {
+                // Stop playback if the recording is currently playing
+                if (playingId === id) {
+                  await stopPlayback();
+                }
 
+                // Delete the file
+                const filePath = getFilePath(recordingToDelete.filename);
+                await RNFS.unlink(filePath);
+
+                // Remove from state and storage
+                const updatedRecordings = savedRecordings.filter(r => r.id !== id);
+                setSavedRecordings(updatedRecordings);
+                await saveSavedRecordings(updatedRecordings);
+
+                Alert.alert("Success", "Recording deleted successfully");
+              } catch (error) {
+                console.error('Error deleting recording:', error);
+                Alert.alert("Error", "Failed to delete recording");
+              }
+            },
+            style: "destructive"
+          }
+        ]
+      );
+    }
+  };
   const saveRecording = async () => {
     if (currentRecording) {
       const filename = currentRecording.split('/').pop();
@@ -125,7 +172,6 @@ const RecordingMenu = ({ isVisible, onClose, onRecordingComplete, isMuted }) => 
       Alert.alert('Success', 'Recording saved successfully');
     }
   };
-
   const toggleRecording = () => {
     if (isRecording) {
       stopRecording();
@@ -133,7 +179,6 @@ const RecordingMenu = ({ isVisible, onClose, onRecordingComplete, isMuted }) => 
       startRecording();
     }
   };
-
   const playRecording = async () => {
     if (isPlaying) {
       await audioRecorderPlayer.pausePlayer();
@@ -159,7 +204,6 @@ const RecordingMenu = ({ isVisible, onClose, onRecordingComplete, isMuted }) => 
       }
     }
   };
-
   const selectRecording = (id) => {
     setSelectedRecordingId(id);
     const recording = savedRecordings.find(r => r.id === id);
@@ -167,7 +211,6 @@ const RecordingMenu = ({ isVisible, onClose, onRecordingComplete, isMuted }) => 
       Alert.alert('Recording Attached', `${recording.name} is being attached.`);
     }
   };
-
   const playSavedRecording = async (id) => {
     const recording = savedRecordings.find(r => r.id === id);
     if (recording) {
@@ -199,10 +242,10 @@ const RecordingMenu = ({ isVisible, onClose, onRecordingComplete, isMuted }) => 
             await audioRecorderPlayer.stopPlayer();
           }
           const result = await audioRecorderPlayer.startPlayer(filePath);
-          console.log('Playing saved recording', result);
+          console.log('priviewing saved recording', result);
           setPlayingId(id);
           setIsLooping(true);
-          Alert.alert('Now Playing', 'Recording is being played.');
+          Alert.alert('Now Playing', 'Recording is being priviewing.');
 
           audioRecorderPlayer.addPlayBackListener((e) => {
             if (e.currentPosition === e.duration) {
@@ -220,7 +263,6 @@ const RecordingMenu = ({ isVisible, onClose, onRecordingComplete, isMuted }) => 
       }
     }
   };
-
   const stopPlayback = async () => {
     if (playingId !== null) {
       await audioRecorderPlayer.stopPlayer();
@@ -232,7 +274,6 @@ const RecordingMenu = ({ isVisible, onClose, onRecordingComplete, isMuted }) => 
       }
     }
   };
-
   const stopAllAudio = async () => {
     try {
       if (isRecording) {
@@ -258,38 +299,42 @@ const RecordingMenu = ({ isVisible, onClose, onRecordingComplete, isMuted }) => 
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const renderSavedItem = ({ item }) => {
+ const renderSavedItem = ({ item }) => {
     const isPlaying = playingId === item.id;
-    const isSelected = selectedRecordingId === item.id;
     return (
-      <TouchableOpacity
-        style={[
-          styles.savedItem,
-          isPlaying && styles.playingItem,
-          isSelected && styles.selectedItem
-        ]}
-        onPress={() => selectRecording(item.id)}
-      >
-        <View>
-          <Text style={[styles.savedItemName, isPlaying && styles.playingText]}>{item.name}</Text>
-          <Text style={[styles.savedItemDate, isPlaying && styles.playingText]}>{item.date}</Text>
-          <Text style={[styles.savedItemDuration, isPlaying && styles.playingText]}>{formatTime(item.duration)}</Text>
-        </View>
-        <View style={styles.playbackControls}>
+      <View style={styles.savedItem}>
+        <TouchableOpacity 
+          style={styles.savedItemContent}
+          onPress={() => selectRecording(item.id)}
+        >
+          <View>
+            <Text style={[styles.savedItemName, isPlaying && styles.playingText]}>{item.name}</Text>
+            <Text style={[styles.savedItemDate, isPlaying && styles.playingText]}>{item.date}</Text>
+            <Text style={[styles.savedItemDuration, isPlaying && styles.playingText]}>{formatTime(item.duration)}</Text>
+          </View>
+
+
+        </TouchableOpacity>
+        <TouchableOpacity 
+          onPress={() => deleteRecording(item.id)} 
+          style={styles.deleteButton}
+        >
+          <Icon name="trash-outline" size={28}  />
+        </TouchableOpacity>
           <TouchableOpacity onPress={() => playSavedRecording(item.id)}>
-            <Icon
-              name={isPlaying ? "pause" : "play"}
-              size={24}
-              color={isPlaying ? "#00ff00" : "#fff"}
-            />
-          </TouchableOpacity>
-          {isPlaying && (
-            <TouchableOpacity onPress={stopPlayback} style={styles.stopButton}>
-              <Icon name="stop" size={24} color="#00ff00" />
+              <Icon
+                name={isPlaying ? "pause" : "play"}
+                size={24}
+                color={isPlaying ? "#00ff00" : "#fff"}
+              />
             </TouchableOpacity>
-          )}
-        </View>
-      </TouchableOpacity>
+            {isPlaying && (
+              <TouchableOpacity onPress={stopPlayback} style={styles.stopButton}>
+                <Icon name="stop" size={24} color="#00ff00" />
+              </TouchableOpacity>
+            )}
+ 
+      </View>
     );
   };
 
@@ -463,6 +508,10 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.5,
+  },
+ deleteButton: {
+  color: '#000',
+  left: 50
   },
 });
 

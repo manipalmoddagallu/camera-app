@@ -103,8 +103,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp('5%'),
   },
   title: {
-    fontSize: wp('4.5%'),
+    fontSize:20,
     fontWeight: 'bold',
+    color: '#000',
+    top: 5,
+    left: 20
   },
   searchBarContainer: {
     flexDirection: 'row',
@@ -136,7 +139,7 @@ const styles = StyleSheet.create({
     color: '#020E27'
   },
   addButton: {
-    backgroundColor: '#4a9c2d',
+    backgroundColor: '#000',
     borderRadius: wp('1%'),
     paddingVertical: hp('0.7%'),
     paddingHorizontal: wp('2.5%'),
@@ -146,7 +149,7 @@ const styles = StyleSheet.create({
     fontSize: wp('3.5%'),
   },
   addSelectedButton: {
-    backgroundColor: '#4a9c2d',
+    backgroundColor: '#000',
     borderRadius: wp('2%'),
     paddingVertical: hp('1.5%'),
     paddingHorizontal: wp('5%'),

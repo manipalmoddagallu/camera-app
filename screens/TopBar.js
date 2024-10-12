@@ -133,11 +133,11 @@ const TopBar = ({
   const scrollBarIcons = [
     { name: 'crop', text: 'Crop', iconSet: 'Ionicons' },
     { name: 'adjust', text: 'Contrast', iconSet: 'FontAwesome', adjustment: 'contrast' },
-    { name: 'sun-o', text: 'Brightness', iconSet: 'FontAwesome', adjustment: 'brightness' },
-    { name: 'thermometer-outline', text: 'Temperature', iconSet: 'Ionicons', adjustment: 'temperature' },
+    { name: 'sun-o', text: 'light', iconSet: 'FontAwesome', adjustment: 'brightness' },
+    { name: 'thermometer-outline', text: 'degree', iconSet: 'Ionicons', adjustment: 'temperature' },
     { name: 'blur', text: 'Softness', iconSet: 'MaterialCommunityIcons', adjustment: 'softness' },
-    { name: 'image-filter-center-focus', text: 'Sharpness', iconSet: 'MaterialCommunityIcons', adjustment: 'sharpness' },
-    { name: 'invert-colors', text: 'Saturation', iconSet: 'MaterialIcons', adjustment: 'saturation' },
+    { name: 'image-filter-center-focus', text: 'clarity', iconSet: 'MaterialCommunityIcons', adjustment: 'sharpness' },
+    { name: 'invert-colors', text: 'chroma', iconSet: 'MaterialIcons', adjustment: 'saturation' },
     { name: 'color-filter', text: 'Filters', iconSet: 'Ionicons' },
     { name: 'image-size-select-large', text: 'PIP', iconSet: 'MaterialCommunityIcons', onPress: onPIPPress },
     ...(isVideo ? [{ name: 'scissors', text: 'Trim', iconSet: 'FontAwesome', onPress: () => handleIconPress({ name: 'scissors' }) }] : []),
@@ -158,6 +158,8 @@ const TopBar = ({
               onValueChange={onContrastChange}
               minimumTrackTintColor="#020E27"
               maximumTrackTintColor="#020E27"
+                            thumbTintColor="#000000"
+
             />
           </View>
         );
@@ -171,6 +173,10 @@ const TopBar = ({
               maximumValue={1.5}
               value={brightnessValue}
               onValueChange={onBrightnessChange}
+              minimumTrackTintColor="#000000"
+              maximumTrackTintColor="#000000"
+                            thumbTintColor="#000000"
+
             />
           </View>
         );
@@ -186,6 +192,8 @@ const TopBar = ({
               onValueChange={onTemperatureChange}
               minimumTrackTintColor="#000000"
               maximumTrackTintColor="#000000"
+                            thumbTintColor="#000000"
+
             />
           </View>
         );
@@ -201,6 +209,8 @@ const TopBar = ({
               onValueChange={onSoftnessChange}
               minimumTrackTintColor="#000000"
               maximumTrackTintColor="#000000"
+                            thumbTintColor="#000000"
+
             />
           </View>
         );
@@ -216,6 +226,8 @@ const TopBar = ({
               onValueChange={onSharpnessChange}
               minimumTrackTintColor="#000000"
               maximumTrackTintColor="#000000"
+                            thumbTintColor="#000000"
+
             />
           </View>
         );
@@ -231,6 +243,8 @@ const TopBar = ({
               onValueChange={onSaturationChange}
               minimumTrackTintColor="#000000"
               maximumTrackTintColor="#000000"
+                                          thumbTintColor="#000000"
+
             />
           </View>
         );
@@ -416,9 +430,11 @@ const styles = StyleSheet.create({
     marginBottom: SCREEN_HEIGHT * 0.02,
   },
   adjustText: {
-    fontSize: SCREEN_WIDTH * 0.04,
+    fontSize: 20,
     marginBottom: SCREEN_HEIGHT * 0.01,
+    color: '#000',
     textAlign: 'center',
+    fontWeight: 'bold'
   },
   slider: {
     width: SCREEN_WIDTH * 0.9,
