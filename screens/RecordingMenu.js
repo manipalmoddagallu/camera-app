@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import RNFS from 'react-native-fs';
 
-const RecordingMenu = ({ isVisible, onClose, onRecordingComplete, isMuted }) => {
+const RecordingMenu = ({ isVisible, onClose, onRecordingComplete, isMuted,onSelectRecording }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [timer, setTimer] = useState(0);
@@ -209,9 +209,10 @@ const RecordingMenu = ({ isVisible, onClose, onRecordingComplete, isMuted }) => 
     const recording = savedRecordings.find(r => r.id === id);
     if (recording) {
       Alert.alert('Recording Attached', `${recording.name} is being attached.`);
+      onSelectRecording(recording); // Pass the selected recording back to EditingScreen
     }
   };
-  const playSavedRecording = async (id) => {
+const playSavedRecording = async (id) => {
     const recording = savedRecordings.find(r => r.id === id);
     if (recording) {
       try {
@@ -242,10 +243,11 @@ const RecordingMenu = ({ isVisible, onClose, onRecordingComplete, isMuted }) => 
             await audioRecorderPlayer.stopPlayer();
           }
           const result = await audioRecorderPlayer.startPlayer(filePath);
-          console.log('priviewing saved recording', result);
+          console.log('previewing saved recording', result);
           setPlayingId(id);
           setIsLooping(true);
-          Alert.alert('Now Playing', 'Recording is being priviewing.');
+          Alert.alert('Now Playing', 'Recording is being previewed.');
+          onSelectRecording(recording); // Pass the playing recording back to EditingScreen
 
           audioRecorderPlayer.addPlayBackListener((e) => {
             if (e.currentPosition === e.duration) {

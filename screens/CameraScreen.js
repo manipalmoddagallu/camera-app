@@ -89,15 +89,9 @@ const CameraScreen = ({ navigation }) => {
       Alert.alert('Error', 'Failed to request permissions. Please try again.');
     }
   };
-const handleGalleryImageSelect = (mediaUri, selectedItem, mediaType) => {
-  console.log('Media selected in CameraScreen:', mediaUri, mediaType);
-  if (mediaType.startsWith('video')) {
-    navigation.navigate('EditingScreen', { 
-      media: { uri: mediaUri, type: 'video' }
-    });
-  } else {
-    navigation.navigate('Layout_Screen', { selectedImage: mediaUri });
-  }
+   const handleGalleryImageSelect = (imageUri) => {
+  console.log('Image selected in CameraScreen:', imageUri);
+  navigation.navigate('Layout_Screen', { selectedImage: imageUri });
 };
 
   const requestCameraPermission = async () => {
@@ -212,59 +206,34 @@ const handleGalleryImageSelect = (mediaUri, selectedItem, mediaType) => {
     }
   };
 
-const takePicture = async () => {
-  if (camera.current == null) {
-    Alert.alert('Camera not initialized', 'Camera is not ready yet.');
-    return;
-  }
-  try {
-    const { width, height } = Dimensions.get('window');
-    const isPortrait = height > width;
-    console.log('Device orientation:', isPortrait ? 'Portrait' : 'Landscape');
-    console.log('Camera position:', selectedDevice.position);
-
-    // Force portrait capture
-    const photo = await camera.current.takePhoto({
-      quality: 1,
-      flash: flash,
-      enableShutterSound: false,
-      skipMetadata: false,
-      enableAutoStabilization: true,
-      orientation: 'portrait', // Force portrait orientation
-      photoCodec: 'jpeg', // Changed to JPEG for better compatibility
-      format: 'jpeg',
-      imageType: 'original',
-      ...(selectedFilter && selectedFilter.id !== 1 && { filter: selectedFilter.filterComponent }),
-    });
-
-    console.log('Photo taken:', photo);
-
-    // Determine if rotation is needed
-    let rotationNeeded = 0;
-    if (selectedDevice.position === 'front' && !isPortrait) {
-      rotationNeeded = 90; // Rotate 90 degrees for front camera in landscape
-    } else if (selectedDevice.position === 'back' && !isPortrait) {
-      rotationNeeded = 0; // Rotate -90 degrees for back camera in landscape
+  const takePicture = async () => {
+    if (camera.current == null) {
+      Alert.alert('Camera not initialized', 'Camera is not ready yet.');
+      return;
     }
+    try {
+      const { width, height } = Dimensions.get('window');
+      const isPortrait = height > width;
 
-    console.log('Rotation needed:', rotationNeeded);
-
-    const imagePath = Platform.OS === 'ios' ? photo.path : `file://${photo.path}`;
-
-    // Pass both the image path and rotation information to the next screen
-navigation.navigate('Layout_Screen', { 
-  selectedImage: imagePath,
-  rotation: rotationNeeded,
-  width: photo.width,
-  height: photo.height,
-  isFrontCamera: selectedDevice.position === 'front'
-});
-
-  } catch (error) {
-    console.error('Error taking picture:', error);
-    Alert.alert('Error', `Failed to take picture: ${error.message}`);
-  }
-};
+      const photo = await camera.current.takePhoto({
+        quality: 1,
+        flash: flash,
+        enableShutterSound: false,
+        skipMetadata: false,
+        enableAutoStabilization: true,
+        outputOrientation: isPortrait ? 'portrait' : 'landscapeRight',
+        photoCodec: 'png',
+        format: 'png',
+        imageType: 'original',
+        ...(selectedFilter && selectedFilter.id !== 1 && { filter: selectedFilter.filterComponent }),
+      });
+    
+      const imagePath = Platform.OS === 'ios' ? photo.path : `file://${photo.path}`;
+      navigation.navigate('Layout_Screen', { selectedImage: imagePath });
+    } catch (error) {
+      Alert.alert('Error', `Failed to take picture: ${error.message}`);
+    }
+  };
 
   const flipCamera = () => {
     if (devices.length > 0) {
@@ -285,7 +254,7 @@ navigation.navigate('Layout_Screen', {
     });
   };
 
-const startVideoRecording = async () => {
+  const startVideoRecording = async () => {
   if (camera.current == null) {
     Alert.alert('Camera not initialized', 'Camera is not ready yet.');
     return;
@@ -306,15 +275,15 @@ const startVideoRecording = async () => {
     const options = {
       flash: flash,
       fileType: 'mp4',
-      videoCodec: 'h264',
-      videoBitRate: isSlowMotionMode ? 20000000 : 8000000,
-      fps: isSlowMotionMode ? 120 : 30,
+      videoCodec: 'h264', // H.264 for high quality and wide compatibility
+      videoBitRate: 8000000, // 8 Mbps for high quality, but not excessive
+      fps: 30, // 30 fps for good quality and compatibility
       videoStabilizationMode: 'standard',
       audioQuality: 'high',
-      audioBitRate: 128000,
+      audioBitRate: 128000, // 128 kbps for high-quality audio
       onRecordingFinished: (video) => {
         console.log('Video recording finished:', video);
-        navigateToEditingScreen(video.path, isSlowMotionMode);
+        navigateToEditingScreen(video.path);
       },
       onRecordingError: (error) => {
         console.error('Video recording error:', error);
@@ -351,9 +320,10 @@ const stopVideoRecording = async () => {
   }
 };
 
-const navigateToEditingScreen = (videoPath, isSlowMotion) => {
+const navigateToEditingScreen = (videoPath) => {
+  console.log('Navigating to EditingScreen with video path:', videoPath);
   navigation.navigate('EditingScreen', { 
-    media: { uri: videoPath, type: isSlowMotion ? 'slowMotionVideo' : 'video' }
+    media: { uri: videoPath, type: 'video' }
   });
 };
 
@@ -516,11 +486,11 @@ const navigateToEditingScreen = (videoPath, isSlowMotion) => {
                 )}
                 
                <TouchableOpacity style={[styles.iconButton, styles.galleryButton]} onPress={openGallery}>
-  <Icon name="images" size={22} color="white" />
+  <Icon name="images" size={24} color="white" />
 </TouchableOpacity>
                 
              <TouchableOpacity style={[styles.iconButton, styles.flipButton]} onPress={flipCamera}>
-  <Icon name="camera-rotate" size={20} color="white" />
+  <Icon name="camera-rotate" size={24} color="white" />
 </TouchableOpacity>
                 
                 <TouchableOpacity
@@ -538,7 +508,7 @@ const navigateToEditingScreen = (videoPath, isSlowMotion) => {
 
                 {isSpecialMode && (
                   <TouchableOpacity style={styles.backButton} onPress={exitSpecialMode}>
-                    <Icon name="arrow-left" size={24} color="white" />
+                    <Icon name="arrow-left" size={30} color="white" />
                   </TouchableOpacity>
                 )}
 
@@ -624,11 +594,11 @@ const navigateToEditingScreen = (videoPath, isSlowMotion) => {
           </TouchableWithoutFeedback>
         </Modal>
         
-<GalleryMenu
-  isVisible={isGalleryMenuVisible}
-  onClose={() => setIsGalleryMenuVisible(false)}
-  onImageSelect={handleGalleryImageSelect}
-/>
+        <GalleryMenu
+    isVisible={isGalleryMenuVisible}
+    onClose={() => setIsGalleryMenuVisible(false)}
+    onImageSelect={handleGalleryImageSelect}
+  />
       </View>
     </TouchableWithoutFeedback>
   );
@@ -652,13 +622,14 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
   },
-  iconButton: {
+   iconButton: {
     backgroundColor: '#4CBB17',
-    padding: 15,
-    borderRadius: 30,
-    aspectRatio: 1,
+    width: 50,  // Fixed width
+    height: 50, // Fixed height (same as width to ensure circle)
+    borderRadius: 25, // Half of width/height
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden', // Ensures content doesn't spill outside the circle
   },
 
   flashButton: {

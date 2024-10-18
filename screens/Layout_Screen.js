@@ -9,7 +9,6 @@ import {
   Text,
   TouchableOpacity,
   Platform,
-  Dimensions,
 } from 'react-native';
 import { FILTERS } from './utils/Filters';
 import { images } from './assets/images/image';
@@ -21,7 +20,7 @@ import Config, { FONT, COLOR, FONT_SIZE } from './utils/Config';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 
 const Layout_Screen = ({ route }) => {
-  const { selectedImage, rotation = 0, width: imageWidth, height: imageHeight, isFrontCamera } = route.params || {};
+  const { selectedImage } = route.params || {};
   const navigation = useNavigation();
   const isFocused = useIsFocused();
 
@@ -29,19 +28,13 @@ const Layout_Screen = ({ route }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const extractedUri = useRef(null);
 
-  const screenWidth = Dimensions.get('window').width;
-  const screenHeight = Dimensions.get('window').height;
-
   useEffect(() => {
     if (isFocused && selectedImage) {
       console.log('Received selectedImage in Layout_Screen:', selectedImage);
-      console.log('Image dimensions:', { width: imageWidth, height: imageHeight });
-      console.log('Is front camera:', isFrontCamera);
-      console.log('Rotation:', rotation);
       setImageUri(selectedImage);
       extractedUri.current = selectedImage;
     }
-  }, [isFocused, selectedImage, imageWidth, imageHeight, isFrontCamera, rotation]);
+  }, [isFocused, selectedImage]);
 
   const onExtractImage = ({ nativeEvent }) => {
     console.log('Extracted URI:', nativeEvent.uri);
@@ -56,7 +49,6 @@ const Layout_Screen = ({ route }) => {
     const imageToPass = selectedIndex === 0 ? imageUri : extractedUri.current;
     navigation.navigate('EditingScreen', {
       media: { uri: imageToPass, type: 'photo' },
-      rotation: rotation, // Add this line
       filterIndex: selectedIndex,
       originalImageUri: imageUri,
     });
@@ -66,7 +58,7 @@ const Layout_Screen = ({ route }) => {
     const FilterComponent = item.filterComponent;
     const image = (
       <Image
-        style={[styles.filterSelector, { rotate: imageRotation }]}
+        style={styles.filterSelector}
         source={{ uri: imageUri }}
         resizeMode={'contain'}
       />
@@ -87,49 +79,26 @@ const Layout_Screen = ({ route }) => {
 
   const SelectedFilterComponent = FILTERS[selectedIndex].filterComponent;
 
-  // Calculate aspect ratio and image dimensions
-
-
-  if (isFrontCamera) {
-    // For front camera, always rotate 90 degrees clockwise
-    displayHeight = screenWidth * 0.9; // 90% of screen width
-    displayWidth = displayHeight / aspectRatio;
-    imageRotation = '270deg';
-    imageScale = -1; // Mirror the image horizontally
-  } else {
-    // For back camera, use the original rotation logic
-    displayWidth = screenWidth * 0.9; // 90% of screen width
-    imageRotation = `${rotation}deg`;
-    imageScale = 1; // No mirroring
-  }
-
-  const renderImage = () => (
-    <View style={styles.imageContainer}>
-      <Image
-        style={[
-          styles.image,
-          {            transform: [
-              { rotate: imageRotation },
-              { scaleX: imageScale },
-            ],
-          },
-        ]}
-        source={{ uri: imageUri }}
-        resizeMode={'contain'}
-      />
-    </View>
-  );
-
   return (
     <SafeAreaView style={styles.container}>
       {imageUri ? (
         selectedIndex === 0 ? (
-          renderImage()
+          <Image
+            style={styles.image}
+            source={{ uri: imageUri }}
+            resizeMode={'contain'}
+          />
         ) : (
           <SelectedFilterComponent
             onExtractImage={onExtractImage}
             extractImageEnabled={true}
-            image={renderImage()}
+            image={
+              <Image
+                style={styles.image}
+                source={{ uri: imageUri }}
+                resizeMode={'contain'}
+              />
+            }
           />
         )
       ) : (
@@ -169,23 +138,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5FCFF',
   },
-  upperContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  lowerContent: {
-    flex: 1,
-  },
-  imageContainer: {
-    width: wp('90%'),
-    height: hp('50%'),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   image: {
     width: wp('90%'),
     height: hp('50%'),
+    marginVertical: hp('2%'),
     alignSelf: 'center',
   },
   filterSelector: {
@@ -213,13 +169,16 @@ const styles = StyleSheet.create({
   },
   noImageText: {
     alignSelf: 'center',
+    width: '100%',
+    height: '45%',
+    justifyContent: 'center',
     textAlign: 'center',
+    marginTop: 20,
     color: '#666',
     fontSize: hp(2.5),
   },
   backgroundImage: {
-    flex: 1,
-    width: wp('100%'),
+    width: wp('99%'),
     alignItems: 'center',
     borderRadius: 10,
     justifyContent: 'center',
@@ -230,7 +189,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    width: wp('100%'),
+    width: wp('99%'),
     borderBottomWidth: hp('0.3%'),
     padding: hp('1%'),
   },
@@ -252,13 +211,13 @@ const styles = StyleSheet.create({
     fontSize: hp('2%'),
   },
   columnWrapper: {
-    justifyContent: 'space-around',
+    columnGap: hp('1%'),
   },
   flatListContainer: {
-    flexGrow: 1,
+    paddingBottom: hp('2%'),
   },
   listFooter: {
-    height: hp(2),
+    marginBottom: hp(20),
   },
 });
 

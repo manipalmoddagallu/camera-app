@@ -64,8 +64,8 @@ const TopBar = ({
 
         ImagePicker.openCropper({
           path: currentMedia.uri,
-          width: 300,
-          height: 400,
+          width: 1080, // Increased width for better quality
+          height: 1080, // Increased height for better quality
           cropperToolbarTitle: 'Crop Image',
           cropperActiveWidgetColor: '#3498db',
           cropperStatusBarColor: '#3498db',
@@ -76,10 +76,14 @@ const TopBar = ({
           enableRotationGesture: true,
           enableZoom: true,
           freeStyleCropEnabled: true,
+          compressImageQuality: 1, // Set to 1 for maximum quality
+          compressImageMaxWidth: 2000, // Increased max width
+          compressImageMaxHeight: 2000, // Increased max height
+          forceJpg: false, // This will
         }).then(image => {
           console.log('Cropped image:', image);
           if (onImageCropped) {
-            onImageCropped({ uri: image.path, type: 'photo' });
+            onImageCropped({ uri: image.path, type: 'photo', width: image.width, height: image.height });
           } else {
             console.warn('onImageCropped is not defined');
           }

@@ -16,7 +16,7 @@ import FastImage from 'react-native-fast-image';
 import axios from 'axios';
 import ViewShot  from "react-native-view-shot";
 import Icon from 'react-native-vector-icons/Ionicons';
-import Icon1 from 'react-native-vector-icons/FontAwesome';
+import Icon1 from 'react-native-vector-icons/FontAwesome'; 
 import Icon2 from 'react-native-vector-icons/MaterialCommunityIcons';
 import Icon4 from 'react-native-vector-icons/Entypo';
 import MusicModal from './MusicMenu';
@@ -98,6 +98,8 @@ const EditingScreen = ({ route, navigation }) => {
   const [draggedItem, setDraggedItem] = useState(null);
   const [drawingOffset, setDrawingOffset] = useState({ x: 0, y: 0 });
 const [drawingScale, setDrawingScale] = useState(1);
+  const [selectedRecording, setSelectedRecording] = useState(null);
+  const [isRecordingPlaying, setIsRecordingPlaying] = useState(false);
 
   const [mediaContainerLayout, setMediaContainerLayout] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
@@ -124,6 +126,14 @@ const [drawingScale, setDrawingScale] = useState(1);
 
   useEffect(() => {
     fetchStickers();
+  }, []);
+  useEffect(() => {
+    return () => {
+      if (audioRecorderPlayer) {
+        audioRecorderPlayer.stopPlayer();
+        audioRecorderPlayer.removePlayBackListener();
+      }
+    };
   }, []);
   useEffect(() => {
     if (draftedMedia) {
@@ -381,7 +391,7 @@ useEffect(() => {
   });
   return unsubscribe;
 }, [navigation, route.params]);
-  const toggleMuteAll = () => {
+ const toggleMuteAll = () => {
     const newMutedState = !isAllMuted;
     setIsAllMuted(newMutedState);
     
@@ -404,8 +414,18 @@ useEffect(() => {
     if (currentSound) {
       currentSound.setVolume(newMutedState ? 0 : 1);
     }
+
+    // Mute/unmute selected recording
+    if (audioRecorderPlayer) {
+      audioRecorderPlayer.setVolume(newMutedState ? 0 : 1);
+    }
+
     setIsMuted(newMutedState);
     console.log(`All audio ${newMutedState ? 'muted' : 'unmuted'}`);
+  };
+  const handleSelectRecording = (recording) => {
+    setSelectedRecording(recording);
+    playSelectedRecording(recording);
   };
   const closeAllMenus = () => {
     setIsFriendsListVisible(false);
@@ -419,6 +439,42 @@ useEffect(() => {
     setIsRecordingMenuVisible(false);
     setIsMusicModalVisible(false);
     setIsStickerBarVisible(false);
+  };
+  const playSelectedRecording = async (recording) => {
+    if (recording) {
+      try {
+        const filePath = `${RNFS.DocumentDirectoryPath}/${recording.filename}`;
+        const fileExists = await RNFS.exists(filePath);
+        if (!fileExists) {
+          console.error('Audio file does not exist:', filePath);
+          Alert.alert('Error', 'Audio file not found');
+          return;
+        }
+
+        await audioRecorderPlayer.startPlayer(filePath);
+        setIsRecordingPlaying(true);
+
+        audioRecorderPlayer.addPlayBackListener((e) => {
+          if (e.currentPosition === e.duration) {
+            audioRecorderPlayer.startPlayer(filePath); // Loop the audio
+          }
+        });
+
+        // Set volume based on mute state
+        audioRecorderPlayer.setVolume(isAllMuted ? 0 : 1);
+      } catch (error) {
+        console.error('Error playing selected recording:', error);
+        Alert.alert('Error', 'Failed to play selected recording');
+      }
+    }
+  };
+const toggleRecordingPlayback = async () => {
+    if (isRecordingPlaying) {
+      await audioRecorderPlayer.pausePlayer();
+      setIsRecordingPlaying(false);
+    } else if (selectedRecording) {
+      await playSelectedRecording(selectedRecording);
+    }
   };
 const handleBrushPress = async () => {
   if (!viewShotRef.current) {
@@ -1873,12 +1929,26 @@ const saveDraft = async () => {
           onColorSelect={handleColorSelect}
         />
       )}
+      {selectedRecording && (
+        <TouchableOpacity 
+          style={styles.recordingPlaybackControl}
+          onPress={toggleRecordingPlayback}
+        >
+          <Icon 
+            name={isRecordingPlaying ? "pause" : "play"} 
+            size={24} 
+            color="#FFF" 
+          />
+          <Text style={styles.recordingName}>{selectedRecording.name}</Text>
+        </TouchableOpacity>
+      )}
       {isRecordingMenuVisible && (
-        <RecordingMenu
+       <RecordingMenu
         isVisible={isRecordingMenuVisible}
         onClose={() => setIsRecordingMenuVisible(false)}
         onRecordingComplete={handleRecordingComplete}
         isMuted={isAllMuted}
+        onSelectRecording={handleSelectRecording}
       />)}
   </SafeAreaView>
   );
